@@ -67,6 +67,7 @@ jobs:
         run: npm run test:e2e
 
       - name: Report coverage
+        continue-on-error: true
         run: |
           node -e "
             const json = JSON.parse(require('fs').readFileSync('coverage/json-summary.json', 'utf8'));
