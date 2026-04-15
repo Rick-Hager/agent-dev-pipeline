@@ -1,0 +1,100 @@
+name: Agent Fix
+
+on:
+  check_suite:
+    types: [completed]
+
+jobs:
+  fix-ci-failure:
+    if: >
+      github.event.check_suite.conclusion == 'failure' &&
+      github.event.check_suite.head_branch != 'main' &&
+      startsWith(github.event.check_suite.head_branch, 'feature/')
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: menuapp_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/menuapp_dev?schema=public
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.check_suite.head_branch }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Push database schema
+        run: npx prisma db push
+
+      - name: Check retry count
+        id: retry
+        run: |
+          BRANCH=${{ github.event.check_suite.head_branch }}
+          COUNT=$(git log --oneline --grep="fix: ci" origin/main..$BRANCH | wc -l | tr -d ' ')
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+          if [ "$COUNT" -ge 2 ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install Claude Code
+        if: steps.retry.outputs.skip == 'false'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Maestro to fix CI
+        if: steps.retry.outputs.skip == 'false'
+        run: |
+          claude --print \
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" \
+            --max-turns 30 \
+            "Read agents/maestro.md and CLAUDE.md for context.
+
+            The CI pipeline has failed on branch ${{ github.event.check_suite.head_branch }}.
+            Run the tests locally to reproduce the failures:
+            1. npm run test
+            2. npm run test:e2e
+            3. npx tsc --noEmit
+            4. npx eslint .
+
+            Fix any failures. Commit the fixes and push."
+
+      - name: Comment on PR if max retries reached
+        if: steps.retry.outputs.skip == 'true'
+        run: |
+          PR_NUMBER=$(gh pr list --head ${{ github.event.check_suite.head_branch }} --json number --jq '.[0].number')
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr comment $PR_NUMBER \
+              --body "🤖 **Agent Fix Failed**
+
+            The agent has attempted to fix CI failures 2 times without success.
+            Human review is needed. Please check the failing tests and fix manually."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
