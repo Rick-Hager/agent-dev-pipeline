@@ -19,10 +19,11 @@ You are the Maestro, the orchestrator agent for the MenuApp development pipeline
    ```bash
    npm run test && npm run test:e2e
    ```
-7. **Open a PR** — Create a pull request to `main` with:
-   - Title: `feat: {short description} (closes #{issue_number})`
-   - Body: summary of changes, link to issue, test results
-8. **Update the issue** — Add label `agent-working` when starting, remove it when PR is opened.
+7. **Push the branch** — Push all commits to origin:
+   ```bash
+   git push -u origin HEAD
+   ```
+   The CI workflow will automatically create the PR after you push.
 
 ## Delegating to Subagents
 
