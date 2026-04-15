@@ -1,0 +1,94 @@
+name: Agent Trigger
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  run-maestro:
+    if: github.event.label.name == 'agent-ready'
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: menuapp_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/menuapp_dev?schema=public
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Push database schema
+        run: npx prisma db push
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Add agent-working label
+        run: gh issue edit ${{ github.event.issue.number }} --add-label "agent-working" --remove-label "agent-ready"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch issue details
+        id: issue
+        run: |
+          ISSUE_BODY=$(gh issue view ${{ github.event.issue.number }} --json title,body --jq '"\(.title)\n\n\(.body)"')
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$ISSUE_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Maestro Agent
+        run: |
+          claude --print \
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" \
+            --max-turns 50 \
+            "Read agents/maestro.md for your instructions. Then implement the following GitHub Issue #${{ github.event.issue.number }}:
+
+            ${{ steps.issue.outputs.body }}
+
+            Repository is already cloned. Create a feature branch, implement with TDD, and open a PR to main."
+
+      - name: Handle failure
+        if: failure()
+        run: |
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "🤖 **Agent Pipeline Failed**
+
+          The Maestro agent encountered an error while processing this issue.
+          Please check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+
+          Adding \`agent-blocked\` label for human review."
+
+          gh issue edit ${{ github.event.issue.number }} \
+            --add-label "agent-blocked" \
+            --remove-label "agent-working"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
