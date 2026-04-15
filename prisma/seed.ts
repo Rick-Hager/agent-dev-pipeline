@@ -386,10 +386,9 @@ async function main(): Promise<void> {
     }
 
     console.log(`  Created ${restaurantData.categories.length} categories and ${SAMPLE_ORDERS.length} orders.`);
-
-    await prisma.$disconnect();
   }
 
+  await prisma.$disconnect();
   console.log("Seed complete.");
 }
 
