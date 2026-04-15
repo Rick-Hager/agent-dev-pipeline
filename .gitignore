@@ -53,3 +53,5 @@ prisma/*.db
 test-results/
 playwright-report/
 coverage/
+
+/src/generated/prisma

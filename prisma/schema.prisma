@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Restaurant {
+  id                    String     @id @default(cuid())
+  name                  String
+  slug                  String     @unique
+  logo                  String?
+  email                 String     @unique
+  passwordHash          String
+  businessHours         Json?
+  stripePublishableKey  String?
+  stripeSecretKey       String?
+  whatsappNumber        String?
+  whatsappApiConfig     Json?
+  whatsappMessageTemplate String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  categories Category[]
+  menuItems  MenuItem[]
+  orders     Order[]
+}
+
+model Category {
+  id           String     @id @default(cuid())
+  restaurantId String
+  name         String
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  menuItems  MenuItem[]
+
+  @@index([restaurantId])
+}
+
+model MenuItem {
+  id           String     @id @default(cuid())
+  categoryId   String
+  restaurantId String
+  name         String
+  description  String?
+  priceInCents Int
+  imageUrl     String?
+  isAvailable  Boolean    @default(true)
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([categoryId])
+  @@index([restaurantId])
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  restaurantId          String
+  orderNumber           Int
+  customerName          String
+  customerPhone         String
+  status                OrderStatus @default(CREATED)
+  paymentMethod         PaymentMethod?
+  stripePaymentIntentId String?
+  totalInCents          Int
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  items      OrderItem[]
+
+  @@unique([restaurantId, orderNumber])
+  @@index([restaurantId])
+  @@index([status])
+}
+
+model OrderItem {
+  id           String   @id @default(cuid())
+  orderId      String
+  menuItemId   String
+  name         String
+  priceInCents Int
+  quantity     Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+}
+
+enum OrderStatus {
+  CREATED
+  PAYMENT_PENDING
+  PAYMENT_APPROVED
+  PREPARING
+  READY
+  PICKED_UP
+  CANCELLED
+}
+
+enum PaymentMethod {
+  PIX
+  CARD
+}
