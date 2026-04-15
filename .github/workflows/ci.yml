@@ -68,12 +68,11 @@ jobs:
 
       - name: Report coverage
         run: |
-          COVERAGE=$(cat coverage/json-summary.json | node -e "
-            const data = require('fs').readFileSync('/dev/stdin', 'utf8');
-            const json = JSON.parse(data);
-            console.log(json.total.lines.pct);
-          ")
-          echo "Coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "::warning::Coverage ${COVERAGE}% is below 80% target"
-          fi
+          node -e "
+            const json = JSON.parse(require('fs').readFileSync('coverage/json-summary.json', 'utf8'));
+            const pct = json.total.lines.pct;
+            console.log('Coverage: ' + pct + '%');
+            if (pct < 80) {
+              console.log('::warning::Coverage ' + pct + '% is below 80% target');
+            }
+          "
