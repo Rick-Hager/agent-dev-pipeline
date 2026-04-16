@@ -157,6 +157,16 @@ export async function POST(
   }
 }
 
+const VALID_ORDER_STATUSES = new Set<string>([
+  "CREATED",
+  "PAYMENT_PENDING",
+  "PAYMENT_APPROVED",
+  "PREPARING",
+  "READY",
+  "PICKED_UP",
+  "CANCELLED",
+]);
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -175,13 +185,85 @@ export async function GET(
       );
     }
 
-    const orders = await prisma.order.findMany({
-      where: { restaurantId: restaurant.id },
-      include: { items: true },
-      orderBy: { orderNumber: "asc" },
-    });
+    const searchParams = request.nextUrl.searchParams;
 
-    return NextResponse.json(orders);
+    const statusParam = searchParams.get("status");
+    const dateFromParam = searchParams.get("dateFrom");
+    const dateToParam = searchParams.get("dateTo");
+    const pageParam = searchParams.get("page");
+    const limitParam = searchParams.get("limit");
+
+    // Validate status
+    if (statusParam !== null && !VALID_ORDER_STATUSES.has(statusParam)) {
+      return NextResponse.json(
+        { error: `Invalid status value: ${statusParam}` },
+        { status: 400 }
+      );
+    }
+
+    const page = pageParam ? Math.max(1, parseInt(pageParam, 10)) : 1;
+    const limit = limitParam ? Math.max(1, parseInt(limitParam, 10)) : 20;
+    const skip = (page - 1) * limit;
+
+    const where: {
+      restaurantId: string;
+      status?: OrderStatus;
+      createdAt?: { gte?: Date; lte?: Date };
+    } = { restaurantId: restaurant.id };
+
+    if (statusParam !== null) {
+      where.status = statusParam as OrderStatus;
+    }
+
+    if (dateFromParam !== null || dateToParam !== null) {
+      where.createdAt = {};
+      if (dateFromParam !== null) {
+        where.createdAt.gte = new Date(`${dateFromParam}T00:00:00.000Z`);
+      }
+      if (dateToParam !== null) {
+        where.createdAt.lte = new Date(`${dateToParam}T23:59:59.999Z`);
+      }
+    }
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: {
+          items: {
+            select: {
+              id: true,
+              name: true,
+              priceInCents: true,
+              quantity: true,
+            },
+          },
+        },
+        orderBy: { orderNumber: "asc" },
+        skip,
+        take: limit,
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({
+      orders: orders.map((order) => ({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        status: order.status,
+        totalInCents: order.totalInCents,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        items: order.items,
+      })),
+      total,
+      page,
+      limit,
+      totalPages,
+    });
   } catch (error) {
     console.error("GET /api/restaurants/[slug]/orders error:", error);
     return NextResponse.json(
