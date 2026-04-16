@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { hashPassword } from "@/lib/password";
 import { signJwt, COOKIE_NAME } from "@/lib/auth";
 
@@ -128,7 +129,7 @@ describe("PATCH /api/restaurants/[slug]/settings", () => {
         name: "Settings Int Test Restaurant",
         slug: TEST_SLUG,
         logo: null,
-        businessHours: null,
+        businessHours: Prisma.DbNull,
         stripePublishableKey: "pk_test_abcdef1234",
         stripeSecretKey: "sk_test_abcdef1234",
         whatsappNumber: null,
