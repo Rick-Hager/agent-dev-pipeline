@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@prisma/client";
 import { validateStatusTransition } from "@/lib/orderUtils";
+import { sendOrderNotification } from "@/lib/whatsapp";
 
 export async function GET(
   request: NextRequest,
@@ -97,6 +98,10 @@ export async function PATCH(
       data: { status: nextStatus },
       include: { items: true },
     });
+
+    sendOrderNotification(updated, restaurant).catch((err) =>
+      console.error("WhatsApp notification error:", err)
+    );
 
     return NextResponse.json(updated);
   } catch (error) {
