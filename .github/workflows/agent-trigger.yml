@@ -50,7 +50,7 @@ jobs:
         run: |
           claude --print \
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" \
-            --max-turns 50 \
+            --max-turns 100 \
             "Read agents/maestro.md for your instructions. Then implement the following GitHub Issue #${{ github.event.issue.number }}. The issue content is saved at /tmp/issue-body.txt — read it with the Read tool. Repository is already cloned. Create a feature branch, implement with TDD, run all tests, and push the branch."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
