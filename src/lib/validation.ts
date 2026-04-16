@@ -1,3 +1,24 @@
+type PriceValidationSuccess = { valid: true };
+type PriceValidationFailure = { valid: false; error: string };
+
+export function validatePriceInCents(
+  value: unknown
+): PriceValidationSuccess | PriceValidationFailure {
+  if (value === null || value === undefined) {
+    return { valid: false, error: "priceInCents is required" };
+  }
+  if (typeof value !== "number") {
+    return { valid: false, error: "priceInCents must be a number" };
+  }
+  if (!Number.isInteger(value)) {
+    return { valid: false, error: "priceInCents must be an integer" };
+  }
+  if (value <= 0) {
+    return { valid: false, error: "priceInCents must be a positive integer" };
+  }
+  return { valid: true };
+}
+
 type RestaurantInputData = {
   name: string;
   slug: string;
