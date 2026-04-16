@@ -12,37 +12,16 @@ permissions:
 jobs:
   run-maestro:
     if: github.event.label.name == 'agent-ready'
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: menuapp_dev
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    runs-on: self-hosted
 
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/menuapp_dev?schema=public
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       JWT_SECRET: test-jwt-secret-for-ci-only
 
     timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -52,9 +31,6 @@ jobs:
 
       - name: Push database schema
         run: npx prisma db push
-
-      - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
 
       - name: Update labels
         run: |
@@ -72,7 +48,6 @@ jobs:
 
       - name: Run Maestro Agent
         run: |
-          ISSUE_BODY=$(cat /tmp/issue-body.txt)
           claude --print \
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" \
             --max-turns 50 \
