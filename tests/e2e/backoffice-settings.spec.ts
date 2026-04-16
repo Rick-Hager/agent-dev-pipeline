@@ -200,7 +200,7 @@ test.describe("Backoffice Settings Page", () => {
     await loginViaUI(page, TEST_EMAIL, TEST_PASSWORD);
     await page.goto("/backoffice/dashboard");
 
-    const settingsLink = page.getByRole("link", { name: /configurações/i });
+    const settingsLink = page.getByRole("link", { name: /configurações/i }).first();
     await expect(settingsLink).toBeVisible();
     await settingsLink.click();
     await expect(page).toHaveURL(/\/backoffice\/settings/);

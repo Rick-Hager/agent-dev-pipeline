@@ -106,9 +106,9 @@ test.describe("Backoffice JWT Auth", () => {
 
     await expect(page).toHaveURL(/\/backoffice\/dashboard/);
 
-    // Dashboard should render welcome content
+    // Dashboard should render heading
     await expect(
-      page.getByText("Welcome to the backoffice dashboard.")
+      page.getByRole("heading", { name: "Dashboard" })
     ).toBeVisible();
 
     // Logout button should be visible
