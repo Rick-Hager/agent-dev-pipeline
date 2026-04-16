@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { verifyJwt, COOKIE_NAME } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 
@@ -18,7 +19,15 @@ export default async function DashboardPage() {
         </div>
       </header>
       <div className="w-full px-6 py-8">
-        <p className="text-gray-600">Welcome to the backoffice dashboard.</p>
+        <p className="text-gray-600 mb-6">Welcome to the backoffice dashboard.</p>
+        <div className="flex flex-col gap-3 max-w-sm">
+          <Link
+            href="/backoffice/menu"
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 text-center"
+          >
+            Gerenciar cardápio
+          </Link>
+        </div>
       </div>
     </main>
   );
