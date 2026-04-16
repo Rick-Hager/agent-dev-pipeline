@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { validateRestaurantInput } from "@/lib/validation";
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(restaurant, { status: 201 });
   } catch (error) {
-    const prismaError = error as PrismaClientKnownRequestError;
+    const prismaError = error as Prisma.PrismaClientKnownRequestError;
     if (prismaError.code === "P2002") {
       const target = (prismaError.meta?.target as string[] | undefined) ?? [];
       if (target.includes("slug")) {

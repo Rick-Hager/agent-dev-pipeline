@@ -1,4 +1,5 @@
 import { describe, it, expect, afterAll, afterEach } from "vitest";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 
 const TEST_SLUGS = ["integration-test-restaurant", "integration-test-duplicate"];
@@ -21,7 +22,7 @@ describe("POST /api/restaurants", () => {
   it("creates a restaurant and returns 201 with safe fields", async () => {
     const { POST } = await import("@/app/api/restaurants/route");
 
-    const request = new Request("http://localhost:3000/api/restaurants", {
+    const request = new NextRequest("http://localhost:3000/api/restaurants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -50,7 +51,7 @@ describe("POST /api/restaurants", () => {
   it("returns 400 when required fields are missing", async () => {
     const { POST } = await import("@/app/api/restaurants/route");
 
-    const request = new Request("http://localhost:3000/api/restaurants", {
+    const request = new NextRequest("http://localhost:3000/api/restaurants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: "No Slug Restaurant" }),
@@ -66,7 +67,7 @@ describe("POST /api/restaurants", () => {
   it("returns 400 when body is empty", async () => {
     const { POST } = await import("@/app/api/restaurants/route");
 
-    const request = new Request("http://localhost:3000/api/restaurants", {
+    const request = new NextRequest("http://localhost:3000/api/restaurants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
@@ -88,7 +89,7 @@ describe("POST /api/restaurants", () => {
 
     // Create first restaurant
     const first = await POST(
-      new Request("http://localhost:3000/api/restaurants", {
+      new NextRequest("http://localhost:3000/api/restaurants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -98,7 +99,7 @@ describe("POST /api/restaurants", () => {
 
     // Attempt to create second with same slug but different email
     const second = await POST(
-      new Request("http://localhost:3000/api/restaurants", {
+      new NextRequest("http://localhost:3000/api/restaurants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, email: "second@integration-test.com" }),
@@ -122,7 +123,7 @@ describe("POST /api/restaurants", () => {
 
     // Create first restaurant
     const first = await POST(
-      new Request("http://localhost:3000/api/restaurants", {
+      new NextRequest("http://localhost:3000/api/restaurants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -132,7 +133,7 @@ describe("POST /api/restaurants", () => {
 
     // Attempt to create second with same email but different slug
     const second = await POST(
-      new Request("http://localhost:3000/api/restaurants", {
+      new NextRequest("http://localhost:3000/api/restaurants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -150,7 +151,7 @@ describe("POST /api/restaurants", () => {
   it("does not include passwordHash in the response body", async () => {
     const { POST } = await import("@/app/api/restaurants/route");
 
-    const request = new Request("http://localhost:3000/api/restaurants", {
+    const request = new NextRequest("http://localhost:3000/api/restaurants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -193,7 +194,7 @@ describe("GET /api/restaurants/[slug]", () => {
 
     const { GET } = await import("@/app/api/restaurants/[slug]/route");
 
-    const request = new Request(
+    const request = new NextRequest(
       `http://localhost:3000/api/restaurants/${TEST_SLUG}`
     );
     const response = await GET(request, {
@@ -210,7 +211,7 @@ describe("GET /api/restaurants/[slug]", () => {
   it("returns 404 when the slug does not exist", async () => {
     const { GET } = await import("@/app/api/restaurants/[slug]/route");
 
-    const request = new Request(
+    const request = new NextRequest(
       "http://localhost:3000/api/restaurants/does-not-exist"
     );
     const response = await GET(request, {
@@ -234,7 +235,7 @@ describe("GET /api/restaurants/[slug]", () => {
 
     const { GET } = await import("@/app/api/restaurants/[slug]/route");
 
-    const request = new Request(
+    const request = new NextRequest(
       `http://localhost:3000/api/restaurants/${TEST_SLUG}`
     );
     const response = await GET(request, {
