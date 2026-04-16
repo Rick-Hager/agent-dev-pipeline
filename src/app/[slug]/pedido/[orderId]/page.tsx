@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@prisma/client";
+import { OrderStatusPolling } from "@/components/OrderStatusPolling";
 
 interface PageProps {
   params: Promise<{ slug: string; orderId: string }>;
@@ -35,7 +36,20 @@ export default async function OrderStatusPage({ params }: PageProps) {
     <main className="max-w-lg mx-auto p-4">
       <h1 className="text-2xl font-bold mb-2">Pedido #{order.orderNumber}</h1>
 
-      <p className="text-zinc-600 mb-6">{STATUS_LABELS[order.status]}</p>
+      <p className="text-zinc-800 font-medium mb-1">{order.customerName}</p>
+      <time className="text-zinc-500 text-sm mb-4 block">
+        {new Date(order.createdAt).toLocaleString("pt-BR")}
+      </time>
+
+      <p className="text-zinc-600 mb-4">{STATUS_LABELS[order.status]}</p>
+
+      <div className="mb-6">
+        <OrderStatusPolling
+          initialStatus={order.status}
+          slug={slug}
+          orderId={orderId}
+        />
+      </div>
 
       <ul className="space-y-3 mb-4">
         {order.items.map((item) => (
