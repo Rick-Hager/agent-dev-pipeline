@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import {
   CartItem,
   loadCart,
@@ -35,18 +29,14 @@ interface CartProviderProps {
 }
 
 export default function CartProvider({ slug, children }: CartProviderProps) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [initialized, setInitialized] = useState(false);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    return loadCart(slug);
+  });
 
   useEffect(() => {
-    setItems(loadCart(slug));
-    setInitialized(true);
-  }, [slug]);
-
-  useEffect(() => {
-    if (!initialized) return;
     saveCart(slug, items);
-  }, [slug, items, initialized]);
+  }, [slug, items]);
 
   const addItem = useCallback((item: Omit<CartItem, "quantity">) => {
     setItems((prev) => addItemToCart(prev, item));
