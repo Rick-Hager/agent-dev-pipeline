@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import CartBadge from "@/components/CartBadge";
+import AddToCartButton from "@/components/AddToCartButton";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -39,7 +41,10 @@ export default async function MenuPage({ params }: PageProps) {
 
   return (
     <main className="max-w-lg mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">{restaurant.name}</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">{restaurant.name}</h1>
+        <CartBadge slug={slug} />
+      </div>
       {categories.map((category) => (
         <section key={category.id} className="mb-8">
           <h2 className="text-xl font-semibold mb-3 border-b pb-1">
@@ -58,6 +63,13 @@ export default async function MenuPage({ params }: PageProps) {
                       {item.description}
                     </p>
                   ) : null}
+                  <AddToCartButton
+                    item={{
+                      id: item.id,
+                      name: item.name,
+                      priceInCents: item.priceInCents,
+                    }}
+                  />
                 </div>
                 <p className="font-medium whitespace-nowrap">
                   R${" "}
