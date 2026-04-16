@@ -286,37 +286,63 @@ describe("POST /api/restaurants/[slug]/orders", () => {
 // ─── GET /api/restaurants/[slug]/orders ──────────────────────────────────────
 
 describe("GET /api/restaurants/[slug]/orders", () => {
-  let orderId: string;
+  let order1Id: string;
+  let order2Id: string;
+  let order3Id: string;
 
   beforeAll(async () => {
-    const order = await prisma.order.create({
+    // Create orders with different statuses and dates for filtering tests
+    const order1 = await prisma.order.create({
       data: {
         restaurantId,
         orderNumber: 100,
-        customerName: "Test Customer",
+        customerName: "Test Customer 1",
         customerPhone: "+5511777777777",
         totalInCents: 1500,
         status: OrderStatus.CREATED,
         items: {
-          create: [
-            {
-              menuItemId,
-              name: "Burger",
-              priceInCents: 1500,
-              quantity: 1,
-            },
-          ],
+          create: [{ menuItemId, name: "Burger", priceInCents: 1500, quantity: 1 }],
         },
       },
     });
-    orderId = order.id;
+    order1Id = order1.id;
+
+    const order2 = await prisma.order.create({
+      data: {
+        restaurantId,
+        orderNumber: 101,
+        customerName: "Test Customer 2",
+        customerPhone: "+5511777777778",
+        totalInCents: 3000,
+        status: OrderStatus.PREPARING,
+        items: {
+          create: [{ menuItemId, name: "Burger", priceInCents: 1500, quantity: 2 }],
+        },
+      },
+    });
+    order2Id = order2.id;
+
+    const order3 = await prisma.order.create({
+      data: {
+        restaurantId,
+        orderNumber: 102,
+        customerName: "Test Customer 3",
+        customerPhone: "+5511777777779",
+        totalInCents: 1500,
+        status: OrderStatus.CANCELLED,
+        items: {
+          create: [{ menuItemId, name: "Burger", priceInCents: 1500, quantity: 1 }],
+        },
+      },
+    });
+    order3Id = order3.id;
   });
 
   afterAll(async () => {
     await prisma.order.deleteMany({ where: { restaurantId } });
   });
 
-  it("returns all orders for the restaurant", async () => {
+  it("returns paginated list with default page=1 and limit=20", async () => {
     const { GET } = await import(
       "@/app/api/restaurants/[slug]/orders/route"
     );
@@ -330,10 +356,146 @@ describe("GET /api/restaurants/[slug]/orders", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBeGreaterThan(0);
-    const found = body.find((o: { id: string }) => o.id === orderId);
+    expect(body).toHaveProperty("orders");
+    expect(body).toHaveProperty("total");
+    expect(body).toHaveProperty("page");
+    expect(body).toHaveProperty("limit");
+    expect(body).toHaveProperty("totalPages");
+    expect(Array.isArray(body.orders)).toBe(true);
+    expect(body.orders.length).toBeGreaterThan(0);
+    expect(body.page).toBe(1);
+    expect(body.limit).toBe(20);
+    const found = body.orders.find((o: { id: string }) => o.id === order1Id);
     expect(found).toBeDefined();
+  });
+
+  it("returns orders with items included", async () => {
+    const { GET } = await import(
+      "@/app/api/restaurants/[slug]/orders/route"
+    );
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/orders`
+    );
+    const response = await GET(request, {
+      params: Promise.resolve({ slug: TEST_SLUG }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    const order = body.orders.find((o: { id: string }) => o.id === order1Id);
+    expect(order).toBeDefined();
+    expect(Array.isArray(order.items)).toBe(true);
+    expect(order.items.length).toBeGreaterThan(0);
+    expect(order.items[0]).toHaveProperty("id");
+    expect(order.items[0]).toHaveProperty("name");
+    expect(order.items[0]).toHaveProperty("priceInCents");
+    expect(order.items[0]).toHaveProperty("quantity");
+  });
+
+  it("filters by status", async () => {
+    const { GET } = await import(
+      "@/app/api/restaurants/[slug]/orders/route"
+    );
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/orders?status=PREPARING`
+    );
+    const response = await GET(request, {
+      params: Promise.resolve({ slug: TEST_SLUG }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(Array.isArray(body.orders)).toBe(true);
+    expect(body.orders.every((o: { status: string }) => o.status === "PREPARING")).toBe(true);
+    const found = body.orders.find((o: { id: string }) => o.id === order2Id);
+    expect(found).toBeDefined();
+  });
+
+  it("filters by dateFrom and dateTo", async () => {
+    const { GET } = await import(
+      "@/app/api/restaurants/[slug]/orders/route"
+    );
+
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const request = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/orders?dateFrom=${today}&dateTo=${today}`
+    );
+    const response = await GET(request, {
+      params: Promise.resolve({ slug: TEST_SLUG }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(Array.isArray(body.orders)).toBe(true);
+    // All orders just created today should be included
+    expect(body.orders.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("returns correct total and totalPages", async () => {
+    const { GET } = await import(
+      "@/app/api/restaurants/[slug]/orders/route"
+    );
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/orders?limit=2`
+    );
+    const response = await GET(request, {
+      params: Promise.resolve({ slug: TEST_SLUG }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.total).toBeGreaterThanOrEqual(3);
+    expect(body.limit).toBe(2);
+    expect(body.totalPages).toBe(Math.ceil(body.total / 2));
+    expect(body.orders.length).toBeLessThanOrEqual(2);
+  });
+
+  it("returns page=2 with correct offset", async () => {
+    const { GET } = await import(
+      "@/app/api/restaurants/[slug]/orders/route"
+    );
+
+    // Get page 1 first
+    const req1 = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/orders?limit=2&page=1`
+    );
+    const res1 = await GET(req1, { params: Promise.resolve({ slug: TEST_SLUG }) });
+    const body1 = await res1.json();
+
+    // Get page 2
+    const req2 = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/orders?limit=2&page=2`
+    );
+    const res2 = await GET(req2, { params: Promise.resolve({ slug: TEST_SLUG }) });
+    const body2 = await res2.json();
+
+    expect(res2.status).toBe(200);
+    expect(body2.page).toBe(2);
+    // Orders on page 2 should be different from page 1
+    const page1Ids = body1.orders.map((o: { id: string }) => o.id);
+    const page2Ids = body2.orders.map((o: { id: string }) => o.id);
+    const overlap = page1Ids.filter((id: string) => page2Ids.includes(id));
+    expect(overlap).toHaveLength(0);
+  });
+
+  it("returns 400 for invalid status value", async () => {
+    const { GET } = await import(
+      "@/app/api/restaurants/[slug]/orders/route"
+    );
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/orders?status=INVALID_STATUS`
+    );
+    const response = await GET(request, {
+      params: Promise.resolve({ slug: TEST_SLUG }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBeDefined();
   });
 });
 
