@@ -88,6 +88,26 @@ All of these must pass before a PR can be merged:
 - Order numbers are sequential per restaurant (`@@unique([restaurantId, orderNumber])`)
 - OrderItem stores snapshots of name and price at time of order
 
+### Prisma 7 — IMPORTANT
+
+This project uses Prisma 7 with `prisma.config.ts`. At runtime, PrismaClient **requires** an explicit adapter:
+
+```typescript
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+```
+
+**DO NOT** use `new PrismaClient()` without an adapter — it will fail at runtime.
+**DO NOT** use `datasources` or `datasourceUrl` options — they don't exist in Prisma 7.
+**DO NOT** import from `@prisma/client/runtime/library` — use `import { Prisma } from "@prisma/client"` instead.
+
+Always use `src/lib/db.ts` to get the Prisma client singleton. Never create a new PrismaClient elsewhere.
+
 ## Key Patterns
 
 ### API Route Pattern
