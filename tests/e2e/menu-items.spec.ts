@@ -1,13 +1,10 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
 
 test.describe("MenuItem API", () => {
   const ts = Date.now();
 
   // Helper to create a restaurant and return the slug
-  async function createRestaurant(
-    request: Parameters<Parameters<typeof test>[1]>[0]["request"],
-    suffix: string
-  ) {
+  async function createRestaurant(request: APIRequestContext, suffix: string) {
     const slug = `e2e-mi-${suffix}-${ts}`;
     const res = await request.post("/api/restaurants", {
       data: {
@@ -23,7 +20,7 @@ test.describe("MenuItem API", () => {
 
   // Helper to create a category and return the category id
   async function createCategory(
-    request: Parameters<Parameters<typeof test>[1]>[0]["request"],
+    request: APIRequestContext,
     slug: string,
     name: string,
     sortOrder = 0
