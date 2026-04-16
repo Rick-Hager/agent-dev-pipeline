@@ -66,23 +66,17 @@ jobs:
       - name: Fetch issue details
         id: issue
         run: |
-          ISSUE_BODY=$(gh issue view ${{ github.event.issue.number }} --json title,body --jq '"\(.title)\n\n\(.body)"')
-          echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo "$ISSUE_BODY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          gh issue view ${{ github.event.issue.number }} --json title,body --jq '"\(.title)\n\n\(.body)"' > /tmp/issue-body.txt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Maestro Agent
         run: |
+          ISSUE_BODY=$(cat /tmp/issue-body.txt)
           claude --print \
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" \
             --max-turns 50 \
-            "Read agents/maestro.md for your instructions. Then implement the following GitHub Issue #${{ github.event.issue.number }}:
-
-            ${{ steps.issue.outputs.body }}
-
-            Repository is already cloned. Create a feature branch, implement with TDD, run all tests, and push the branch."
+            "Read agents/maestro.md for your instructions. Then implement the following GitHub Issue #${{ github.event.issue.number }}. The issue content is saved at /tmp/issue-body.txt — read it with the Read tool. Repository is already cloned. Create a feature branch, implement with TDD, run all tests, and push the branch."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
