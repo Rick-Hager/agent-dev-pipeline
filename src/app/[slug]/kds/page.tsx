@@ -33,10 +33,21 @@ export default function KdsPage() {
   }, [slug]);
 
   useEffect(() => {
-    void fetchOrders();
-    const interval = setInterval(() => void fetchOrders(), 30000);
-    return () => clearInterval(interval);
-  }, [fetchOrders]);
+    let cancelled = false;
+    const load = async () => {
+      const res = await fetch(`/api/restaurants/${slug}/kds`);
+      if (res.ok && !cancelled) {
+        const data = await res.json() as { orders: Order[] };
+        setOrders(data.orders);
+      }
+    };
+    void load();
+    const interval = setInterval(() => void load(), 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [slug]);
 
   const novos = orders.filter((o) => o.status === "PAYMENT_APPROVED");
   const preparando = orders.filter((o) => o.status === "PREPARING");
