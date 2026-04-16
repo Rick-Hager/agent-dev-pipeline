@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { OrderFilters } from "@/components/OrderFilters";
 import { OrderTable } from "@/components/OrderTable";
 import { OrderPagination } from "@/components/OrderPagination";
@@ -50,9 +50,10 @@ export function OrdersClient({ slug }: OrdersClientProps) {
 
   const [data, setData] = useState<OrdersResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const fetchIdRef = useRef(0);
 
   useEffect(() => {
-    setLoading(true);
+    const id = ++fetchIdRef.current;
 
     const params = new URLSearchParams();
     if (status) params.set("status", status);
@@ -63,27 +64,34 @@ export function OrdersClient({ slug }: OrdersClientProps) {
     fetch(`/api/restaurants/${slug}/orders?${params.toString()}`)
       .then((res) => res.json())
       .then((json: OrdersResponse) => {
-        setData(json);
+        if (id === fetchIdRef.current) {
+          setData(json);
+        }
       })
       .catch(() => {
         // keep previous data on error
       })
       .finally(() => {
-        setLoading(false);
+        if (id === fetchIdRef.current) {
+          setLoading(false);
+        }
       });
   }, [slug, status, dateFrom, dateTo, page]);
 
   function handleStatusChange(value: string) {
+    setLoading(true);
     setStatus(value);
     setPage(1);
   }
 
   function handleDateFromChange(value: string) {
+    setLoading(true);
     setDateFrom(value);
     setPage(1);
   }
 
   function handleDateToChange(value: string) {
+    setLoading(true);
     setDateTo(value);
     setPage(1);
   }
