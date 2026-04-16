@@ -114,12 +114,6 @@ export default async function DashboardPage() {
           >
             Configurações
           </Link>
-          <Link
-            href="/backoffice/settings"
-            className="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 text-center"
-          >
-            Configurações
-          </Link>
         </div>
       </section>
     </div>
