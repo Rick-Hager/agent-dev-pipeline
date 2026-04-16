@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 
 interface OrderItem {
   id: string;
@@ -75,9 +75,8 @@ export function OrderTable({ orders }: OrderTableProps) {
             const statusColor = STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-800";
 
             return (
-              <>
+              <React.Fragment key={order.id}>
                 <tr
-                  key={order.id}
                   onClick={() => toggleRow(order.id)}
                   className="cursor-pointer hover:bg-gray-50 transition-colors"
                 >
@@ -95,7 +94,7 @@ export function OrderTable({ orders }: OrderTableProps) {
                   </td>
                 </tr>
                 {isExpanded && (
-                  <tr key={`${order.id}-detail`} data-testid="order-detail-row">
+                  <tr data-testid="order-detail-row">
                     <td colSpan={6} className="px-4 py-4 bg-gray-50 border-t border-gray-100">
                       <div className="space-y-2">
                         <p className="font-medium text-gray-700 mb-2">Detalhes do pedido</p>
@@ -125,7 +124,7 @@ export function OrderTable({ orders }: OrderTableProps) {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             );
           })}
         </tbody>
