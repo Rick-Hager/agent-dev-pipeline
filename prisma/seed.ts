@@ -294,12 +294,14 @@ const SAMPLE_ORDERS: SampleOrder[] = [
 
 async function main(): Promise<void> {
   // Lazy imports so PrismaClient is only constructed when the script runs
+  const { Pool } = await import("pg");
+  const { PrismaPg } = await import("@prisma/adapter-pg");
   const { PrismaClient } = await import("@prisma/client");
   const bcrypt = await import("bcryptjs");
 
-  const prisma = new PrismaClient({
-    datasources: { db: { url: process.env.DATABASE_URL } },
-  });
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg(pool);
+  const prisma = new PrismaClient({ adapter });
 
   console.log("Seeding database...");
 
