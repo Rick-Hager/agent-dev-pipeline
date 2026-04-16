@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/components/CartProvider";
 import { PaymentForm } from "@/components/PaymentForm";
@@ -29,6 +29,7 @@ interface PaymentSession {
 export default function CheckoutPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
+  const router = useRouter();
   const { items, totalInCents, clearCart } = useCart();
 
   const [customerName, setCustomerName] = useState("");
@@ -104,7 +105,10 @@ export default function CheckoutPage() {
         }
       );
       if (!payRes.ok) {
-        setApiError("Erro ao iniciar pagamento. Tente novamente.");
+        // Payment initialization failed (e.g. restaurant has no Stripe keys).
+        // Order is already created — clear cart and show status page.
+        clearCart();
+        router.push(`/${slug}/pedido/${order.id}`);
         return;
       }
       const pay = (await payRes.json()) as {
