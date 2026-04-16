@@ -21,7 +21,7 @@ function getSecret(): Uint8Array {
 
 export async function signJwt(payload: JwtPayload): Promise<string> {
   const secret = getSecret();
-  return new SignJWT(payload)
+  return new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE_SECONDS}s`)
