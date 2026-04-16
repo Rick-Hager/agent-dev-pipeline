@@ -25,6 +25,9 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/db", () => ({ prisma: prismaMock }));
 
+vi.mock("@/components/CartBadge", () => ({ default: () => null }));
+vi.mock("@/components/AddToCartButton", () => ({ default: () => null }));
+
 // Import page AFTER mocks are registered
 import MenuPage from "@/app/[slug]/page";
 
