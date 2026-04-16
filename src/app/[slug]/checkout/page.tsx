@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/components/CartProvider";
+import { PaymentForm } from "@/components/PaymentForm";
 
 function formatPrice(priceInCents: number): string {
   return `R$ ${(priceInCents / 100).toFixed(2).replace(".", ",")}`;
@@ -16,17 +17,42 @@ function applyPhoneMask(value: string): string {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
+type PaymentMethod = "PIX" | "CARD";
+
+interface PaymentSession {
+  orderId: string;
+  clientSecret: string;
+  publishableKey: string;
+  paymentMethod: PaymentMethod;
+}
+
 export default function CheckoutPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
-  const router = useRouter();
   const { items, totalInCents, clearCart } = useCart();
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("PIX");
   const [phoneError, setPhoneError] = useState("");
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [payment, setPayment] = useState<PaymentSession | null>(null);
+
+  if (payment) {
+    return (
+      <main className="max-w-lg mx-auto p-4">
+        <h1 className="text-2xl font-bold mb-6">Finalize o pagamento</h1>
+        <PaymentForm
+          clientSecret={payment.clientSecret}
+          publishableKey={payment.publishableKey}
+          paymentMethod={payment.paymentMethod}
+          slug={slug}
+          orderId={payment.orderId}
+        />
+      </main>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -54,7 +80,7 @@ export default function CheckoutPage() {
     setApiError("");
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/restaurants/${slug}/orders`, {
+      const orderRes = await fetch(`/api/restaurants/${slug}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -63,13 +89,37 @@ export default function CheckoutPage() {
           items: items.map((i) => ({ menuItemId: i.id, quantity: i.quantity })),
         }),
       });
-      if (!response.ok) {
+      if (!orderRes.ok) {
         setApiError("Erro ao realizar pedido. Tente novamente.");
         return;
       }
-      const order = await response.json() as { id: string; orderNumber: number };
+      const order = (await orderRes.json()) as { id: string; orderNumber: number };
+
+      const payRes = await fetch(
+        `/api/restaurants/${slug}/orders/${order.id}/pay`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentMethod }),
+        }
+      );
+      if (!payRes.ok) {
+        setApiError("Erro ao iniciar pagamento. Tente novamente.");
+        return;
+      }
+      const pay = (await payRes.json()) as {
+        clientSecret: string;
+        publishableKey: string;
+        paymentMethod: PaymentMethod;
+      };
+
       clearCart();
-      router.push(`/${slug}/pedido/${order.id}`);
+      setPayment({
+        orderId: order.id,
+        clientSecret: pay.clientSecret,
+        publishableKey: pay.publishableKey,
+        paymentMethod: pay.paymentMethod,
+      });
     } catch {
       setApiError("Erro ao realizar pedido. Tente novamente.");
     } finally {
@@ -138,6 +188,32 @@ export default function CheckoutPage() {
             <p className="text-red-600 text-sm">{phoneError}</p>
           )}
         </div>
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className="font-medium mb-1">Forma de pagamento</legend>
+          <label htmlFor="pm-pix" className="flex items-center gap-2 cursor-pointer">
+            <input
+              id="pm-pix"
+              type="radio"
+              name="paymentMethod"
+              value="PIX"
+              checked={paymentMethod === "PIX"}
+              onChange={() => setPaymentMethod("PIX")}
+            />
+            <span>PIX</span>
+          </label>
+          <label htmlFor="pm-card" className="flex items-center gap-2 cursor-pointer">
+            <input
+              id="pm-card"
+              type="radio"
+              name="paymentMethod"
+              value="CARD"
+              checked={paymentMethod === "CARD"}
+              onChange={() => setPaymentMethod("CARD")}
+            />
+            <span>Cartão</span>
+          </label>
+        </fieldset>
 
         {apiError && (
           <p className="text-red-600 text-sm">{apiError}</p>
