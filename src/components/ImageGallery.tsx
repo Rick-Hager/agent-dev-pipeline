@@ -118,7 +118,7 @@ export function ImageGallery({
         type="button"
         aria-label="Fechar galeria"
         onClick={handleClose}
-        className="absolute top-4 right-4 text-white text-3xl leading-none p-2 hover:bg-white/10 rounded-full"
+        className="absolute top-4 right-4 z-10 text-white text-3xl leading-none p-2 hover:bg-white/10 rounded-full"
       >
         ×
       </button>
