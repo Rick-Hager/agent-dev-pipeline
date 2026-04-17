@@ -76,7 +76,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const paymentStatus = await fetchPaymentStatus(accessToken, paymentId);
+    let paymentStatus;
+    try {
+      paymentStatus = await fetchPaymentStatus(accessToken, paymentId);
+    } catch (fetchError) {
+      console.error("Failed to fetch payment status from MercadoPago:", fetchError);
+      return NextResponse.json(
+        { received: true, warning: "Could not fetch payment status" },
+        { status: 200 }
+      );
+    }
 
     if (!paymentStatus.externalReference) {
       return NextResponse.json(
