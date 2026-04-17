@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { Category, MenuItem } from "@prisma/client";
+import type { Category, MenuItem, MenuItemImage } from "@prisma/client";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 
-export type CategoryWithItems = Category & { menuItems: MenuItem[] };
+export type MenuItemWithImages = MenuItem & { images: MenuItemImage[] };
+export type CategoryWithItems = Category & { menuItems: MenuItemWithImages[] };
 
 interface MenuManagerProps {
   slug: string;
@@ -166,9 +168,10 @@ export function MenuManager({ slug, initialCategories }: MenuManagerProps) {
         throw new Error(data.error ?? "Erro ao criar item");
       }
       const newItem = (await response.json()) as MenuItem;
+      const itemWithImages: MenuItemWithImages = { ...newItem, images: [] };
       setCategories((prev) =>
         prev.map((c) =>
-          c.id === categoryId ? { ...c, menuItems: [...c.menuItems, newItem] } : c
+          c.id === categoryId ? { ...c, menuItems: [...c.menuItems, itemWithImages] } : c
         )
       );
       setNewItemCategoryId(null);
@@ -221,7 +224,12 @@ export function MenuManager({ slug, initialCategories }: MenuManagerProps) {
       setCategories((prev) =>
         prev.map((c) =>
           c.id === categoryId
-            ? { ...c, menuItems: c.menuItems.map((item) => (item.id === itemId ? updated : item)) }
+            ? {
+                ...c,
+                menuItems: c.menuItems.map((item) =>
+                  item.id === itemId ? { ...updated, images: item.images } : item
+                ),
+              }
             : c
         )
       );
@@ -432,6 +440,39 @@ export function MenuManager({ slug, initialCategories }: MenuManagerProps) {
                         >
                           Disponível
                         </label>
+                      </div>
+                      <div className="border-t border-blue-200 pt-3">
+                        <ImageUploader
+                          slug={slug}
+                          itemId={item.id}
+                          initialImages={item.images}
+                          onChange={(images) => {
+                            setCategories((prev) =>
+                              prev.map((c) =>
+                                c.id === category.id
+                                  ? {
+                                      ...c,
+                                      menuItems: c.menuItems.map((mi) =>
+                                        mi.id === item.id
+                                          ? {
+                                              ...mi,
+                                              images: images.map((img) => ({
+                                                id: img.id,
+                                                url: img.url,
+                                                sortOrder: img.sortOrder,
+                                                menuItemId: mi.id,
+                                                createdAt: new Date(),
+                                                updatedAt: new Date(),
+                                              })),
+                                            }
+                                          : mi
+                                      ),
+                                    }
+                                  : c
+                              )
+                            );
+                          }}
+                        />
                       </div>
                       <div className="flex items-center gap-2">
                         <button

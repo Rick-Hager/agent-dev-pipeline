@@ -17,7 +17,13 @@ export default async function MenuPage() {
 
   const categories = await prisma.category.findMany({
     where: { restaurantId: auth.restaurantId },
-    include: { menuItems: true },
+    include: {
+      menuItems: {
+        include: {
+          images: { orderBy: { sortOrder: "asc" } },
+        },
+      },
+    },
     orderBy: { sortOrder: "asc" },
   });
 
