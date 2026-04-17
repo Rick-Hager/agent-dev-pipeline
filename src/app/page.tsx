@@ -1,13 +1,25 @@
-import Link from "next/link";
+import { HeroSection } from "@/components/landing/HeroSection";
+import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
+import { OperatorSection } from "@/components/landing/OperatorSection";
+import { ConsumerSection } from "@/components/landing/ConsumerSection";
+import { PricingSection } from "@/components/landing/PricingSection";
+import { ContactSection } from "@/components/landing/ContactSection";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-white">
-      <h1 className="text-4xl font-bold">MenuApp</h1>
-      <p className="mt-2 text-lg text-zinc-600">Cardápio digital para restaurantes</p>
-      <Link href="/admin/login" className="mt-6 rounded-lg bg-black px-6 py-3 text-white">
-        Entrar
-      </Link>
+    <main className="min-h-screen bg-white text-zinc-900">
+      <HeroSection />
+      <HowItWorksSection />
+      <OperatorSection />
+      <ConsumerSection />
+      <PricingSection />
+      <ContactSection />
+      <footer className="border-t border-zinc-200 bg-white px-6 py-8 text-center text-sm text-zinc-500">
+        <p>
+          &copy; {new Date().getFullYear()} Cardápio Rápido. Todos os direitos
+          reservados.
+        </p>
+      </footer>
     </main>
   );
 }
