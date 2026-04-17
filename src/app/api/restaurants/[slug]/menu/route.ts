@@ -36,6 +36,10 @@ export async function GET(
             priceInCents: true,
             imageUrl: true,
             sortOrder: true,
+            images: {
+              orderBy: { sortOrder: "asc" },
+              select: { id: true, url: true, sortOrder: true },
+            },
           },
         },
       },

@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
-import type { Category, MenuItem } from "@prisma/client";
+import type { Category, MenuItem, MenuItemImage } from "@prisma/client";
 
-type CategoryWithItems = Category & { menuItems: MenuItem[] };
+type MenuItemWithImages = MenuItem & { images: MenuItemImage[] };
+type CategoryWithItems = Category & { menuItems: MenuItemWithImages[] };
 
 // Mock fetch globally
 beforeEach(() => {
@@ -33,6 +34,7 @@ const fakeCategories: CategoryWithItems[] = [
         sortOrder: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
+        images: [],
       },
       {
         id: "item-2",
@@ -46,6 +48,7 @@ const fakeCategories: CategoryWithItems[] = [
         sortOrder: 2,
         createdAt: new Date(),
         updatedAt: new Date(),
+        images: [],
       },
     ],
   },
@@ -69,6 +72,7 @@ const fakeCategories: CategoryWithItems[] = [
         sortOrder: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
+        images: [],
       },
     ],
   },

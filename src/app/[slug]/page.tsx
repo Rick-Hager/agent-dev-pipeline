@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import CartBadge from "@/components/CartBadge";
 import AddToCartButton from "@/components/AddToCartButton";
+import { MenuItemRow } from "@/components/MenuItemRow";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -33,7 +34,12 @@ export default async function MenuPage({ params }: PageProps) {
           name: true,
           description: true,
           priceInCents: true,
+          imageUrl: true,
           sortOrder: true,
+          images: {
+            orderBy: { sortOrder: "asc" },
+            select: { id: true, url: true, sortOrder: true },
+          },
         },
       },
     },
@@ -51,32 +57,41 @@ export default async function MenuPage({ params }: PageProps) {
             {category.name}
           </h2>
           <ul className="space-y-4">
-            {category.menuItems.map((item) => (
-              <li key={item.id} className="flex justify-between items-start">
-                <div className="flex-1 mr-4">
-                  <p className="font-medium">{item.name}</p>
-                  {item.description ? (
-                    <p
-                      data-testid="item-description"
-                      className="text-sm text-zinc-500 mt-0.5"
-                    >
-                      {item.description}
-                    </p>
-                  ) : null}
-                  <AddToCartButton
-                    item={{
-                      id: item.id,
-                      name: item.name,
-                      priceInCents: item.priceInCents,
-                    }}
+            {category.menuItems.map((item) => {
+              const itemImages = item.images ?? [];
+              const galleryImages =
+                itemImages.length > 0
+                  ? itemImages
+                  : item.imageUrl
+                  ? [
+                      {
+                        id: `legacy-${item.id}`,
+                        url: item.imageUrl,
+                        sortOrder: 0,
+                      },
+                    ]
+                  : [];
+
+              return (
+                <li key={item.id}>
+                  <MenuItemRow
+                    name={item.name}
+                    description={item.description}
+                    priceInCents={item.priceInCents}
+                    images={galleryImages}
+                    addToCart={
+                      <AddToCartButton
+                        item={{
+                          id: item.id,
+                          name: item.name,
+                          priceInCents: item.priceInCents,
+                        }}
+                      />
+                    }
                   />
-                </div>
-                <p className="font-medium whitespace-nowrap">
-                  R${" "}
-                  {(item.priceInCents / 100).toFixed(2).replace(".", ",")}
-                </p>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         </section>
       ))}

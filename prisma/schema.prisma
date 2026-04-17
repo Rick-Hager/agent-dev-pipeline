@@ -57,9 +57,23 @@ model MenuItem {
   category   Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
+  images     MenuItemImage[]
 
   @@index([categoryId])
   @@index([restaurantId])
+}
+
+model MenuItemImage {
+  id         String   @id @default(cuid())
+  menuItemId String
+  url        String
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([menuItemId])
 }
 
 model Order {
