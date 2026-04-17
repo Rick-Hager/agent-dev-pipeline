@@ -3,12 +3,11 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 import React from "react";
 
 // Hoisted mocks
-const { useCartMock, useRouterMock, useParamsMock, paymentFormMock } = vi.hoisted(() => {
+const { useCartMock, useRouterMock, useParamsMock } = vi.hoisted(() => {
   const useCartMock = vi.fn();
   const useRouterMock = vi.fn();
   const useParamsMock = vi.fn();
-  const paymentFormMock = vi.fn();
-  return { useCartMock, useRouterMock, useParamsMock, paymentFormMock };
+  return { useCartMock, useRouterMock, useParamsMock };
 });
 
 vi.mock("@/components/CartProvider", () => ({
@@ -18,17 +17,6 @@ vi.mock("@/components/CartProvider", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: useRouterMock,
   useParams: useParamsMock,
-}));
-
-vi.mock("@/components/PaymentForm", () => ({
-  PaymentForm: (props: Record<string, unknown>) => {
-    paymentFormMock(props);
-    return React.createElement(
-      "div",
-      { "data-testid": "payment-form" },
-      `PaymentForm: ${String(props.paymentMethod)}`
-    );
-  },
 }));
 
 import CheckoutPage from "@/app/[slug]/checkout/page";
@@ -99,9 +87,11 @@ describe("CheckoutPage", () => {
     expect(screen.getByLabelText("Telefone")).toBeInTheDocument();
   });
 
-  it("renders submit button labeled Confirmar Pedido", () => {
+  it('renders submit button labeled "Ir para pagamento"', () => {
     render(<CheckoutPage />);
-    expect(screen.getByRole("button", { name: "Confirmar Pedido" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ir para pagamento" })
+    ).toBeInTheDocument();
   });
 
   it("renders payment method radios PIX and Cartão", () => {
@@ -126,7 +116,9 @@ describe("CheckoutPage", () => {
   it("does not render form when cart is empty", () => {
     setupMocks([]);
     render(<CheckoutPage />);
-    expect(screen.queryByRole("button", { name: "Confirmar Pedido" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Ir para pagamento" })
+    ).not.toBeInTheDocument();
   });
 
   it("applies Brazilian phone mask as user types", async () => {
@@ -154,12 +146,14 @@ describe("CheckoutPage", () => {
     fireEvent.change(nameInput, { target: { value: "João" } });
     fireEvent.change(phoneInput, { target: { value: "123" } });
     await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
+      fireEvent.submit(
+        screen.getByRole("button", { name: "Ir para pagamento" }).closest("form")!
+      );
     });
     expect(screen.getByText("Telefone inválido")).toBeInTheDocument();
   });
 
-  it("submits form: creates order then payment intent with PIX by default", async () => {
+  it("submits form: creates order then payment preference with PIX by default", async () => {
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
@@ -168,17 +162,18 @@ describe("CheckoutPage", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          clientSecret: "pi_secret",
-          publishableKey: "pk_test_123",
+          redirectUrl: "https://mercadopago.test/pay/pref_1",
+          preferenceId: "pref_1",
           paymentMethod: "PIX",
-          paymentIntentId: "pi_123",
         }),
       });
     render(<CheckoutPage />);
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
     fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
     await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
+      fireEvent.submit(
+        screen.getByRole("button", { name: "Ir para pagamento" }).closest("form")!
+      );
     });
     // First call: create order
     expect(global.fetch).toHaveBeenNthCalledWith(
@@ -196,7 +191,7 @@ describe("CheckoutPage", () => {
         }),
       })
     );
-    // Second call: create payment intent with PIX
+    // Second call: create preference with PIX
     expect(global.fetch).toHaveBeenNthCalledWith(
       2,
       "/api/restaurants/lanche-do-ze/orders/order-abc/pay",
@@ -216,10 +211,9 @@ describe("CheckoutPage", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          clientSecret: "pi_secret",
-          publishableKey: "pk_test_123",
+          redirectUrl: "https://mercadopago.test/pay/pref_1",
+          preferenceId: "pref_1",
           paymentMethod: "CARD",
-          paymentIntentId: "pi_123",
         }),
       });
     render(<CheckoutPage />);
@@ -227,7 +221,9 @@ describe("CheckoutPage", () => {
     fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
     fireEvent.click(screen.getByLabelText(/Cart[ãa]o/i));
     await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
+      fireEvent.submit(
+        screen.getByRole("button", { name: "Ir para pagamento" }).closest("form")!
+      );
     });
     expect(global.fetch).toHaveBeenNthCalledWith(
       2,
@@ -238,7 +234,23 @@ describe("CheckoutPage", () => {
     );
   });
 
-  it("renders PaymentForm with returned clientSecret after successful order+pay", async () => {
+  it("redirects to MercadoPago redirectUrl after successful pay", async () => {
+    const originalLocation = window.location;
+    const assignedHrefs: string[] = [];
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: {
+        ...originalLocation,
+        set href(v: string) {
+          assignedHrefs.push(v);
+        },
+        get href() {
+          return assignedHrefs[assignedHrefs.length - 1] ?? "";
+        },
+      },
+    });
+
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
@@ -247,33 +259,33 @@ describe("CheckoutPage", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          clientSecret: "pi_secret_xyz",
-          publishableKey: "pk_test_123",
+          redirectUrl: "https://mercadopago.test/pay/pref_xyz",
+          preferenceId: "pref_xyz",
           paymentMethod: "PIX",
-          paymentIntentId: "pi_123",
         }),
       });
+
     render(<CheckoutPage />);
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
     fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
     await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
+      fireEvent.submit(
+        screen.getByRole("button", { name: "Ir para pagamento" }).closest("form")!
+      );
     });
+
     await waitFor(() => {
-      expect(screen.getByTestId("payment-form")).toBeInTheDocument();
+      expect(assignedHrefs).toContain("https://mercadopago.test/pay/pref_xyz");
     });
-    expect(paymentFormMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        clientSecret: "pi_secret_xyz",
-        publishableKey: "pk_test_123",
-        paymentMethod: "PIX",
-        slug: "lanche-do-ze",
-        orderId: "order-abc",
-      })
-    );
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: originalLocation,
+    });
   });
 
-  it("clears cart on successful order creation", async () => {
+  it("clears cart on successful order creation + pay", async () => {
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
@@ -282,24 +294,48 @@ describe("CheckoutPage", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          clientSecret: "pi_secret",
-          publishableKey: "pk_test_123",
+          redirectUrl: "https://mercadopago.test/pref",
+          preferenceId: "pref",
           paymentMethod: "PIX",
-          paymentIntentId: "pi_123",
         }),
       });
     render(<CheckoutPage />);
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
     fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
     await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
+      fireEvent.submit(
+        screen.getByRole("button", { name: "Ir para pagamento" }).closest("form")!
+      );
     });
     await waitFor(() => {
       expect(clearCartMock).toHaveBeenCalled();
     });
   });
 
-  it("shows error message on API failure", async () => {
+  it("falls back to order status page when payment API fails (no MP token)", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: "order-abc", orderNumber: 5 }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: "no token" }),
+      });
+    render(<CheckoutPage />);
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
+    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
+    await act(async () => {
+      fireEvent.submit(
+        screen.getByRole("button", { name: "Ir para pagamento" }).closest("form")!
+      );
+    });
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith("/lanche-do-ze/pedido/order-abc");
+    });
+  });
+
+  it("shows error message on order API failure", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: "Server error" }),
@@ -308,10 +344,14 @@ describe("CheckoutPage", () => {
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
     fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
     await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
+      fireEvent.submit(
+        screen.getByRole("button", { name: "Ir para pagamento" }).closest("form")!
+      );
     });
     await waitFor(() => {
-      expect(screen.getByText("Erro ao realizar pedido. Tente novamente.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Erro ao realizar pedido. Tente novamente.")
+      ).toBeInTheDocument();
     });
   });
 
@@ -325,10 +365,12 @@ describe("CheckoutPage", () => {
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
     fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
     act(() => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
+      fireEvent.submit(
+        screen.getByRole("button", { name: /ir para pagamento/i }).closest("form")!
+      );
     });
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /confirmar pedido/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /ir para pagamento/i })).toBeDisabled();
     });
     act(() => {
       resolvePromise!({ ok: false, json: async () => ({}) });

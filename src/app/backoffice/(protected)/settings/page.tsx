@@ -29,8 +29,7 @@ export default async function SettingsPage() {
       logo: true,
       email: true,
       businessHours: true,
-      stripePublishableKey: true,
-      stripeSecretKey: true,
+      mercadopagoAccessToken: true,
       whatsappNumber: true,
       whatsappMessageTemplate: true,
     },
@@ -49,8 +48,7 @@ export default async function SettingsPage() {
     businessHours: restaurant.businessHours
       ? JSON.stringify(restaurant.businessHours, null, 2)
       : "",
-    stripePublishableKey: restaurant.stripePublishableKey ?? "",
-    stripeSecretKeyMasked: maskSecret(restaurant.stripeSecretKey),
+    mercadopagoAccessTokenMasked: maskSecret(restaurant.mercadopagoAccessToken),
     whatsappNumber: restaurant.whatsappNumber ?? "",
     whatsappMessageTemplate: restaurant.whatsappMessageTemplate ?? "",
   };

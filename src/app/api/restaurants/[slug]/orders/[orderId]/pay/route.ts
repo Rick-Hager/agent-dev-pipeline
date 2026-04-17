@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { OrderStatus, PaymentMethod } from "@prisma/client";
-import { createOrderPaymentIntent } from "@/lib/stripe";
+import { createOrderPreference } from "@/lib/mercadopago";
+
+function resolveBaseUrl(request: NextRequest): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+  const origin = request.nextUrl.origin;
+  return origin;
+}
 
 export async function POST(
   request: NextRequest,
@@ -18,9 +26,9 @@ export async function POST(
       );
     }
 
-    if (!restaurant.stripeSecretKey || !restaurant.stripePublishableKey) {
+    if (!restaurant.mercadopagoAccessToken) {
       return NextResponse.json(
-        { error: "Restaurant has no Stripe keys configured" },
+        { error: "Restaurant has no MercadoPago access token configured" },
         { status: 400 }
       );
     }
@@ -42,27 +50,33 @@ export async function POST(
       );
     }
 
-    const intent = await createOrderPaymentIntent(restaurant.stripeSecretKey, {
-      amountInCents: order.totalInCents,
-      paymentMethod: paymentMethod as PaymentMethod,
-      orderId: order.id,
-      restaurantId: restaurant.id,
-    });
+    const preference = await createOrderPreference(
+      restaurant.mercadopagoAccessToken,
+      {
+        orderId: order.id,
+        restaurantId: restaurant.id,
+        amountInCents: order.totalInCents,
+        paymentMethod: paymentMethod as PaymentMethod,
+        orderNumber: order.orderNumber,
+        itemsSummary: `Pedido #${order.orderNumber} — ${restaurant.name}`,
+        baseUrl: resolveBaseUrl(request),
+        slug: restaurant.slug,
+      }
+    );
 
     await prisma.order.update({
       where: { id: order.id },
       data: {
         status: OrderStatus.PAYMENT_PENDING,
         paymentMethod: paymentMethod as PaymentMethod,
-        stripePaymentIntentId: intent.id,
+        mercadopagoPreferenceId: preference.id,
       },
     });
 
     return NextResponse.json({
-      clientSecret: intent.clientSecret,
-      publishableKey: restaurant.stripePublishableKey,
+      redirectUrl: preference.initPoint,
+      preferenceId: preference.id,
       paymentMethod,
-      paymentIntentId: intent.id,
     });
   } catch (error) {
     console.error(
