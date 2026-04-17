@@ -56,7 +56,9 @@ async function seedCart(
     quantity: number;
   }>
 ) {
-  await page.goto(`/${slug}`);
+  // Navigate to a page outside the [slug] layout so CartProvider doesn't
+  // mount and overwrite localStorage with an empty cart via its useEffect.
+  await page.goto(`/backoffice/login`);
   await page.evaluate(
     ([cartKey, cartValue]) => {
       localStorage.setItem(cartKey, cartValue);
@@ -83,7 +85,7 @@ async function placeOrder(
   await page.goto(`/${slug}/checkout`);
   await page.getByLabel("Nome").fill(customerName);
   await page.getByLabel("Telefone").fill(phone);
-  await page.getByRole("button", { name: "Confirmar Pedido" }).click();
+  await page.getByRole("button", { name: /ir para pagamento/i }).click();
   await expect(page).toHaveURL(new RegExp(`/${slug}/pedido/`));
   const url = page.url();
   const orderId = url.split("/pedido/")[1];
@@ -326,7 +328,7 @@ test.describe("Order Status Page", () => {
     await page.goto(`/${restaurant.slug}/checkout`);
     await page.getByLabel("Nome").fill("Fernanda Lima");
     await page.getByLabel("Telefone").fill("31987654321");
-    await page.getByRole("button", { name: "Confirmar Pedido" }).click();
+    await page.getByRole("button", { name: /ir para pagamento/i }).click();
 
     // Should redirect to order status page
     await expect(page).toHaveURL(new RegExp(`/${restaurant.slug}/pedido/`));

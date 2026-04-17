@@ -50,7 +50,9 @@ async function seedCart(
   slug: string,
   items: Array<{ id: string; name: string; priceInCents: number; quantity: number }>
 ) {
-  await page.goto(`/${slug}`);
+  // Navigate to a page outside the [slug] layout so CartProvider doesn't
+  // mount and overwrite localStorage with an empty cart via its useEffect.
+  await page.goto(`/backoffice/login`);
   await page.evaluate(
     ([cartKey, cartValue]) => {
       localStorage.setItem(cartKey, cartValue);
