@@ -16,7 +16,7 @@ Um projeto que demonstra um **pipeline de desenvolvimento agenticol**: humanos e
 | UI | React 19 + Tailwind CSS 4 |
 | Banco | PostgreSQL 16 via Prisma 7 |
 | Auth | JWT (jose) + bcryptjs |
-| Pagamentos | Stripe (PIX + Card) |
+| Pagamentos | MercadoPago Checkout Pro (PIX + Card) |
 | Notificacoes | WhatsApp via Twilio |
 | Testes | Vitest + Playwright |
 | Deploy | Vercel (auto-deploy) |
@@ -32,7 +32,7 @@ Um projeto que demonstra um **pipeline de desenvolvimento agenticol**: humanos e
 - Checkout com dados do cliente
 - Sistema de pedidos com status tracking
 - Kitchen Display System (KDS) com auto-refresh
-- Pagamentos Stripe (PIX + Cartao)
+- Pagamentos MercadoPago Checkout Pro (PIX + Cartao)
 - Notificacoes WhatsApp via Twilio
 - Backoffice protegido com JWT
 - CRUD completo de cardapio (categorias + itens)

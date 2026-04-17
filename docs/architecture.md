@@ -17,6 +17,7 @@ O projeto tambem serve como prova de conceito de um **pipeline de desenvolviment
 | UI | React + Tailwind CSS | React 19, Tailwind 4 |
 | Banco de Dados | PostgreSQL via Prisma ORM | Postgres 16, Prisma 7 |
 | Autenticacao | JWT (jose) + bcryptjs | HS256, HttpOnly cookie |
+| Pagamentos | MercadoPago Checkout Pro | Per-restaurant config |
 | Storage | Vercel Blob | Imagens de produtos |
 | Notificacoes | WhatsApp via Twilio | Per-restaurant config |
 | Testes Unit/Integration | Vitest + React Testing Library | Vitest 4.x |
@@ -109,8 +110,7 @@ Restaurant (1) ──→ (N) Category (1) ──→ (N) MenuItem (1) ──→ (
 | passwordHash | String | Hash bcrypt |
 | logo | String? | URL do logo |
 | businessHours | Json? | Horarios de funcionamento |
-| stripePublishableKey | String? | Chave publica Stripe |
-| stripeSecretKey | String? | Chave secreta Stripe |
+| mercadopagoAccessToken | String? | Access Token MercadoPago (per-restaurant) |
 | whatsappNumber | String? | Numero WhatsApp |
 | whatsappApiConfig | Json? | {accountSid, authToken} |
 | whatsappMessageTemplate | String? | Template com {orderNumber} e {status} |
@@ -149,7 +149,8 @@ Restaurant (1) ──→ (N) Category (1) ──→ (N) MenuItem (1) ──→ (
 | customerPhone | String | Telefone (somente digitos) |
 | status | OrderStatus | Estado atual do pedido |
 | paymentMethod | PaymentMethod? | PIX ou CARD |
-| stripePaymentIntentId | String? | ID do Stripe |
+| mercadopagoPreferenceId | String? | ID da Preference MercadoPago |
+| mercadopagoPaymentId | String? | ID do pagamento MercadoPago |
 | totalInCents | Int | Total em centavos |
 
 **OrderItem** — Snapshot de item no momento do pedido.
@@ -294,7 +295,6 @@ Todos devem passar para merge:
 | Variavel | Descricao |
 |----------|-----------|
 | `BLOB_READ_WRITE_TOKEN` | Token Vercel Blob para upload de imagens |
-| `STRIPE_WEBHOOK_SECRET` | Validacao de webhooks Stripe |
 | `TWILIO_ACCOUNT_SID` | Conta Twilio (fallback app-level) |
 | `TWILIO_AUTH_TOKEN` | Token Twilio |
 | `TWILIO_WHATSAPP_FROM` | Numero de envio WhatsApp |

@@ -29,7 +29,7 @@ Este documento descreve todas as funcionalidades implementadas no MenuApp. Cada 
 14. [Order API](#14-order-api)
 
 ### Integracoes
-15. [Stripe — Pagamentos PIX e Cartao](#15-stripe--pagamentos-pix-e-cartao)
+15. [MercadoPago — Checkout Pro (PIX e Cartao)](#15-mercadopago--checkout-pro-pix-e-cartao)
 16. [WhatsApp — Notificacoes via Twilio](#16-whatsapp--notificacoes-via-twilio)
 
 ### Midia
@@ -164,15 +164,18 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 1. Cliente acessa `/{slug}/checkout` (vindo do carrinho)
 2. Ve resumo do pedido (itens + total)
 3. Preenche nome e telefone (com mascara)
-4. Clica "Confirmar Pedido"
-5. Sistema cria o pedido via API
-6. Carrinho e limpo
-7. Cliente e redirecionado para a pagina de acompanhamento
+4. Seleciona forma de pagamento (PIX ou Cartao)
+5. Clica "Ir para pagamento"
+6. Sistema cria o pedido via API e gera Preference no MercadoPago
+7. Carrinho e limpo
+8. Cliente e redirecionado para pagina do MercadoPago
+9. Apos pagamento, MercadoPago redireciona para `/{slug}/pedido/{orderId}`
 
 **Componentes**:
 - Pagina: `src/app/[slug]/checkout/page.tsx` (Client Component)
-- API: `POST /api/restaurants/{slug}/orders`
-- Lib: `validation.ts` (validatePhone)
+- API: `POST /api/restaurants/{slug}/orders` (cria pedido)
+- API: `POST /api/restaurants/{slug}/orders/{orderId}/pay` (cria Preference MercadoPago)
+- Lib: `validation.ts` (validatePhone), `mercadopago.ts` (criar preference)
 
 **Regras de Negocio**:
 - Nome e telefone sao obrigatorios
@@ -181,19 +184,23 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 - `orderNumber` sequencial por restaurante (com retry em caso de race condition)
 - `OrderItem` armazena snapshot de nome e preco
 - Total calculado no servidor (nao confia no cliente)
+- Pagamento via MercadoPago Checkout Pro (redirect)
+- Metodos restritos a PIX e Cartao
 
 **Criterios de Aceitacao**:
 - [ ] Resumo mostra itens e total corretos
 - [ ] Validacao impede envio sem nome ou telefone
+- [ ] Seletor de forma de pagamento (PIX ou Cartao)
+- [ ] Botao "Ir para pagamento" cria pedido e redireciona ao MercadoPago
 - [ ] Pedido e criado com numero sequencial
 - [ ] Carrinho limpo apos confirmacao
-- [ ] Redirect para pagina de acompanhamento
+- [ ] Apos pagamento, retorna para pagina de acompanhamento
 - [ ] Checkout com carrinho vazio redireciona para o cardapio
 
 **Testes Existentes**:
 - Unit: `CheckoutPage.test.tsx`, `validation.test.ts`
-- Integration: `orders.test.ts`
-- E2E: `checkout.spec.ts`
+- Integration: `orders.test.ts`, `payments.test.ts`
+- E2E: `checkout.spec.ts`, `payments.spec.ts`
 
 ---
 
@@ -325,30 +332,38 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 
 **Fluxo do Usuario**:
 1. Dono acessa `/backoffice/dashboard` (apos login)
-2. Ve tres cards: Pedidos Hoje, Receita Hoje, Pedidos Ativos
-3. Abaixo, links rapidos: Gerenciar Cardapio, Ver Pedidos, Abrir KDS, Configuracoes
-4. Sidebar (AdminNav) permite navegacao entre todas as secoes
+2. Ve cinco cards: Pedidos Hoje, Receita Hoje, Pedidos Ativos, Pagamentos Pendentes, Taxa de Conversao
+3. Se MercadoPago nao configurado, ve alerta visual com link para configuracoes
+4. Abaixo, links rapidos: Gerenciar Cardapio, Ver Pedidos, Abrir KDS, Configuracoes, Ver Cardapio
+5. Sidebar (AdminNav) permite navegacao entre todas as secoes
 
 **Componentes**:
 - Pagina: `src/app/backoffice/(protected)/dashboard/page.tsx` (Server Component)
-- Componentes: `StatCard`, `AdminNav`
+- Componentes: `StatCard`, `AdminNav`, `DashboardView`
 - API: Consulta direta ao Prisma (Server Component, sem API intermediaria)
 
 **Regras de Negocio**:
 - "Pedidos Hoje": count de pedidos com status nao-cancelado criados hoje (UTC)
 - "Receita Hoje": sum de `totalInCents` dos mesmos pedidos
 - "Pedidos Ativos": count de pedidos com status PREPARING ou READY
+- "Pagamentos Pendentes": count de pedidos com status PAYMENT_PENDING
+- "Taxa de Conversao": % de pedidos com pagamento aprovado vs total criados hoje
+- Alerta de configuracao exibido se `mercadopagoAccessToken` esta vazio
+- "Ver Cardapio": link rapido para `/{slug}` (cardapio publico)
 - Valores monetarios formatados em BRL
 
 **Criterios de Aceitacao**:
-- [ ] Dashboard exibe tres metricas corretas
+- [ ] Dashboard exibe cinco metricas corretas
 - [ ] Receita formatada em BRL (R$ X.XXX,XX)
-- [ ] Links rapidos navegam para as paginas corretas
+- [ ] Card de pagamentos pendentes mostra contagem correta
+- [ ] Taxa de conversao exibida como percentual
+- [ ] Alerta visual se MercadoPago nao configurado
+- [ ] Links rapidos navegam para as paginas corretas (incluindo Ver Cardapio)
 - [ ] AdminNav aparece em todas as paginas do backoffice
 - [ ] Pagina requer autenticacao
 
 **Testes Existentes**:
-- Unit: `StatCard.test.tsx`, `AdminNav.test.tsx`
+- Unit: `StatCard.test.tsx`, `AdminNav.test.tsx`, `DashboardView.test.tsx`
 - Integration: `stats.test.ts`
 - E2E: `dashboard.spec.ts`
 
@@ -446,11 +461,11 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 
 ### 10. Configuracoes do Restaurante
 
-**Objetivo**: Permitir que o dono configure informacoes do restaurante, chaves Stripe e WhatsApp.
+**Objetivo**: Permitir que o dono configure informacoes do restaurante, Access Token do MercadoPago e WhatsApp.
 
 **Fluxo do Usuario**:
 1. Dono acessa `/backoffice/settings`
-2. Ve formulario com secoes: Informacoes Gerais, Stripe, WhatsApp
+2. Ve formulario com secoes: Informacoes Gerais, MercadoPago, WhatsApp
 3. Edita campos desejados
 4. Clica "Salvar"
 5. Feedback de sucesso/erro
@@ -461,7 +476,7 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 - API: `GET/PATCH /api/restaurants/{slug}/settings`
 
 **Regras de Negocio**:
-- Chave secreta Stripe exibida mascarada (****XXXX)
+- Access Token do MercadoPago exibido mascarado (****XXXX)
 - Apenas o restaurante autenticado pode ver/editar suas configuracoes
 - Nunca expor `passwordHash` na API
 - Campos opcionais podem ser nulos
@@ -469,7 +484,7 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 
 **Criterios de Aceitacao**:
 - [ ] Formulario carrega dados atuais do restaurante
-- [ ] Chave Stripe secreta aparece mascarada
+- [ ] Access Token MercadoPago aparece mascarado
 - [ ] Salvar atualiza os dados com sucesso
 - [ ] Validacao impede nome vazio
 - [ ] Requer autenticacao
@@ -563,24 +578,48 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 
 ## Integracoes
 
-### 15. Stripe — Pagamentos PIX e Cartao
+### 15. MercadoPago — Checkout Pro (PIX e Cartao)
 
-**Objetivo**: Integrar pagamentos via Stripe suportando PIX e Cartao de credito, com chaves configuradas por restaurante.
+**Objetivo**: Integrar pagamentos via MercadoPago Checkout Pro. O consumidor e redirecionado para a pagina do MercadoPago para pagar (PIX ou Cartao), e o valor vai direto para a conta do restaurante. Substitui a integracao anterior com Stripe.
+
+**Fluxo do Usuario**:
+1. Consumidor preenche nome, telefone e seleciona forma de pagamento (PIX ou Cartao)
+2. Clica em "Ir para pagamento"
+3. Pedido e criado e uma Preference e gerada no MercadoPago
+4. Consumidor e redirecionado para pagina do MercadoPago
+5. Apos pagamento, MercadoPago redireciona para `/{slug}/pedido/{orderId}`
+6. Webhook IPN do MercadoPago atualiza status do pedido automaticamente
 
 **Componentes**:
-- Chaves armazenadas em `Restaurant.stripePublishableKey` e `Restaurant.stripeSecretKey`
-- Campo `Order.stripePaymentIntentId` para rastreamento
-- Campo `Order.paymentMethod` (PIX | CARD)
+- Checkout: `src/app/[slug]/checkout/page.tsx` — resumo do pedido e botao de pagamento
+- API pagamento: `src/app/api/restaurants/[slug]/orders/[orderId]/pay/route.ts` — cria Preference
+- Webhook: `src/app/api/webhooks/mercadopago/route.ts` — recebe IPN e atualiza status
+- Lib: `src/lib/mercadopago.ts` — wrapper do SDK MercadoPago (criar preference, consultar pagamento)
+- Schema: `Restaurant.mercadopagoAccessToken` (per-restaurant), `Order.mercadopagoPreferenceId`, `Order.mercadopagoPaymentId`
 
 **Regras de Negocio**:
-- Chaves Stripe sao per-restaurant (cada dono configura as suas)
-- Chave secreta nunca exposta na API (mascarada com ****)
-- PaymentIntent criado com `amount: totalInCents, currency: 'brl'`
-- PIX: `payment_method_types: ['pix']`
-- Cartao: `payment_method_types: ['card']`
-- Webhook deve usar `request.text()` para raw body (verificacao de assinatura)
+- Access Token do MercadoPago e per-restaurant (cada dono configura o seu nas settings)
+- Token nunca exposto na API (mascarado com ****)
+- Preference criada com `payment_methods` restrito a PIX + Cartao
+- `back_urls` apontam para pagina do pedido (success, failure, pending)
+- `notification_url` configurada para receber webhooks IPN
+- Webhook consulta API do MercadoPago com payment ID para verificar status
+- Status approved → PAYMENT_APPROVED, rejected → CANCELLED
 
-**Testes**: Cobertura via testes de settings e order
+**Criterios de Aceitacao**:
+- [ ] POST /pay cria Preference e retorna URL de redirect
+- [ ] Consumidor e redirecionado ao MercadoPago
+- [ ] Apos pagamento, retorna para pagina do pedido
+- [ ] Webhook IPN atualiza status do pedido
+- [ ] Apenas PIX e Cartao como metodos de pagamento
+- [ ] Restaurante sem Access Token recebe erro 400
+- [ ] Valor vai direto para conta do restaurante
+
+**Testes Existentes**:
+- Unit: `mercadopago.test.ts` (criar preference, validar webhook)
+- Unit: `CheckoutPage.test.tsx`
+- Integration: `payments.test.ts` (POST /pay, webhooks)
+- E2E: `payments.spec.ts`
 
 ---
 
