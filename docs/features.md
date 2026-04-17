@@ -32,6 +32,9 @@ Este documento descreve todas as funcionalidades implementadas no MenuApp. Cada 
 15. [Stripe — Pagamentos PIX e Cartao](#15-stripe--pagamentos-pix-e-cartao)
 16. [WhatsApp — Notificacoes via Twilio](#16-whatsapp--notificacoes-via-twilio)
 
+### Midia
+18. [Galeria de Imagens de Produtos](#18-galeria-de-imagens-de-produtos)
+
 ### Infraestrutura
 17. [Database Seed](#17-database-seed)
 
@@ -72,14 +75,18 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 **Fluxo do Usuario**:
 1. Cliente acessa `/{slug}` (ex: `/pizzaria-bella`)
 2. Ve o nome do restaurante e categorias organizadas
-3. Cada categoria mostra seus itens com nome, descricao e preco
-4. Itens indisponiveis (`isAvailable = false`) nao aparecem
-5. Botao "Adicionar" em cada item adiciona ao carrinho
-6. Badge no header mostra quantidade de itens no carrinho
+3. Cada categoria mostra seus itens com nome, descricao, preco e thumbnail
+4. Thumbnail da imagem principal (64px) aparece a esquerda de cada item
+5. Itens sem imagem exibem placeholder visual
+6. Click na thumbnail abre popup fullscreen com galeria de imagens
+7. Galeria com swipe horizontal (touch/drag), dots indicadores, botao fechar e Escape
+8. Itens indisponiveis (`isAvailable = false`) nao aparecem
+9. Botao "Adicionar" em cada item adiciona ao carrinho
+10. Badge no header mostra quantidade de itens no carrinho
 
 **Componentes**:
 - Pagina: `src/app/[slug]/page.tsx` (Server Component)
-- Componentes: `AddToCartButton`, `CartBadge`, `CartProvider`
+- Componentes: `AddToCartButton`, `CartBadge`, `CartProvider`, `ImageGallery`
 - API: `GET /api/restaurants/{slug}/menu`
 - Lib: `cart.ts` (addItemToCart, getTotalItems)
 
@@ -88,18 +95,25 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 - Categorias ordenadas por `sortOrder`
 - Itens ordenados por `sortOrder` dentro da categoria
 - Precos exibidos em BRL (R$ XX,XX) — armazenados em centavos
+- Thumbnail exibe a imagem com menor `sortOrder` (imagem principal)
+- Galeria exibe todas as imagens do item ordenadas por `sortOrder`
 
 **Criterios de Aceitacao**:
 - [ ] Acessar `/{slug}` exibe o nome do restaurante
 - [ ] Categorias e itens aparecem ordenados
 - [ ] Itens indisponiveis nao aparecem na listagem
+- [ ] Thumbnail da imagem principal aparece a esquerda de cada item
+- [ ] Placeholder visual para itens sem imagem
+- [ ] Click na thumbnail abre galeria fullscreen
+- [ ] Galeria com swipe horizontal e dots indicadores
+- [ ] Fechar galeria com botao X, click fora ou Escape
 - [ ] Botao "Adicionar" adiciona item ao carrinho
 - [ ] Badge do carrinho atualiza com a quantidade correta
 - [ ] Slug inexistente retorna 404
 
 **Testes Existentes**:
-- Unit: `MenuPage.test.tsx`
-- E2E: `consumer-menu.spec.ts`
+- Unit: `MenuPage.test.tsx`, `ImageGallery.test.tsx`
+- E2E: `consumer-menu.spec.ts`, `menu-item-images.spec.ts`
 
 ---
 
@@ -349,19 +363,27 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 2. Ve lista de categorias com seus itens
 3. Pode criar, editar e excluir categorias
 4. Pode criar, editar e excluir itens dentro de cada categoria
-5. Pode marcar itens como disponivel/indisponivel
-6. Todas as operacoes sao inline (sem navegacao)
+5. Pode fazer upload de ate 5 imagens por item (jpg, png, webp, max 5MB)
+6. Ve preview das imagens com indicador de contagem (ex: "3/5 imagens")
+7. Pode remover imagens individuais
+8. Pode reordenar imagens via drag-and-drop
+9. Pode marcar itens como disponivel/indisponivel
+10. Todas as operacoes sao inline (sem navegacao)
 
 **Componentes**:
 - Pagina: `src/app/backoffice/(protected)/menu/page.tsx` (Server Component)
-- Componentes: `MenuManager` (Client Component, CRUD completo)
-- APIs: Category API + MenuItem API (ver secoes 12 e 13)
+- Componentes: `MenuManager` (Client Component, CRUD completo), `ImageUploader` (upload/preview/delete/reorder)
+- APIs: Category API + MenuItem API (ver secoes 12 e 13) + Image API (ver secao 18)
 
 **Regras de Negocio**:
 - Excluir categoria exclui todos os itens (cascade)
 - Excluir item faz soft-delete (isAvailable = false)
 - Preco deve ser inteiro positivo (centavos)
 - Nome e obrigatorio para categorias e itens
+- Maximo 5 imagens por item (validacao na API e no frontend)
+- Tipos de imagem aceitos: jpg, png, webp
+- Tamanho maximo por imagem: 5MB
+- Imagens armazenadas no Vercel Blob
 
 **Criterios de Aceitacao**:
 - [ ] Lista categorias e itens do restaurante autenticado
@@ -372,11 +394,15 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 - [ ] Editar campos do item
 - [ ] Excluir item (soft-delete)
 - [ ] Validacao de campos obrigatorios
+- [ ] Upload de imagens com preview e indicador de contagem
+- [ ] Remover imagens individuais
+- [ ] Reordenar imagens via drag-and-drop
+- [ ] Input de upload oculto quando 5 imagens ja existem
 
 **Testes Existentes**:
-- Unit: `MenuManager.test.tsx`
-- Integration: `categories.test.ts`, `menuItems.test.ts`
-- E2E: `backoffice-menu.spec.ts`
+- Unit: `MenuManager.test.tsx`, `ImageUploader.test.tsx`
+- Integration: `categories.test.ts`, `menuItems.test.ts`, `menuItemImages.test.ts`
+- E2E: `backoffice-menu.spec.ts`, `menu-item-images.spec.ts`
 
 ---
 
@@ -596,6 +622,81 @@ Cada feature abaixo segue este formato. **Ao descrever novas funcionalidades, us
 |-------------|-------|-------|
 | Pizzaria Bella | `bella@example.com` | `password123` |
 | Sushi Zen | `zen@example.com` | `password123` |
+
+---
+
+## Midia
+
+### 18. Galeria de Imagens de Produtos
+
+**Objetivo**: Permitir que cada item do cardapio tenha ate 5 imagens, exibidas como thumbnail no cardapio publico e gerenciadas via upload no backoffice. Imagens armazenadas no Vercel Blob.
+
+**Fluxo do Usuario (Consumidor)**:
+1. Cliente acessa `/{slug}` e ve o cardapio
+2. Cada item exibe thumbnail quadrada (64px) da imagem principal a esquerda
+3. Itens sem imagem exibem placeholder visual
+4. Click na thumbnail abre popup fullscreen com galeria
+5. Galeria com swipe horizontal (touch em mobile, drag em desktop)
+6. Dots indicadores mostram posicao na galeria
+7. Fechar com botao X, click fora da imagem ou tecla Escape
+
+**Fluxo do Usuario (Backoffice)**:
+1. Dono acessa `/backoffice/menu` e edita um item
+2. Secao de imagens mostra thumbnails das imagens existentes
+3. Indicador de contagem (ex: "3/5 imagens")
+4. Botao de upload para adicionar nova imagem
+5. Botao de remover em cada thumbnail
+6. Drag-and-drop para reordenar imagens
+7. Input de upload oculto quando limite de 5 atingido
+8. Feedback de loading durante upload
+
+**Componentes**:
+- Pagina (consumidor): `src/app/[slug]/page.tsx` — thumbnail e abertura da galeria
+- Componente galeria: `src/components/ImageGallery.tsx` (Client Component, swipe/touch)
+- Componente upload: `src/components/admin/ImageUploader.tsx` (Client Component, upload/preview/delete/reorder)
+- APIs:
+  - `POST /api/restaurants/{slug}/menu-items/{itemId}/images` — upload de imagem
+  - `DELETE /api/restaurants/{slug}/menu-items/{itemId}/images/{imageId}` — remover imagem
+  - `PATCH /api/restaurants/{slug}/menu-items/{itemId}/images/reorder` — reordenar imagens
+- Lib: `src/lib/imageValidation.ts` (validacao de tipo, tamanho, limite), `src/lib/blob.ts` (wrapper Vercel Blob)
+- Schema: modelo `MenuItemImage` (id, menuItemId, url, sortOrder)
+
+**Regras de Negocio**:
+- Maximo 5 imagens por item do cardapio
+- Tipos aceitos: image/jpeg, image/png, image/webp
+- Tamanho maximo: 5MB por imagem
+- Imagens ordenadas por `sortOrder` — a de menor sortOrder e a thumbnail principal
+- Upload armazenado no Vercel Blob (requer `BLOB_READ_WRITE_TOKEN`)
+- Delete remove do banco e do Vercel Blob
+- Reorder valida que os IDs enviados correspondem exatamente as imagens existentes
+- Todas as rotas protegidas por JWT com validacao de tenant (403 se slug nao pertence ao JWT)
+- Item deve pertencer ao restaurante autenticado (404 se nao)
+
+**Criterios de Aceitacao**:
+- [ ] Modelo MenuItemImage com relacao MenuItem 1→N (cascade delete)
+- [ ] POST upload cria registro e armazena no Vercel Blob
+- [ ] DELETE remove registro e arquivo do Blob
+- [ ] PATCH reorder atualiza sortOrder de todas as imagens
+- [ ] Validacao de limite de 5 imagens (400)
+- [ ] Validacao de tipo de arquivo (400)
+- [ ] Validacao de tamanho (400)
+- [ ] Autenticacao obrigatoria (401)
+- [ ] Validacao de tenant (403)
+- [ ] Item deve pertencer ao restaurante (404)
+- [ ] Thumbnail no cardapio publico
+- [ ] Placeholder para itens sem imagem
+- [ ] Popup fullscreen com galeria swipe
+- [ ] Dots indicadores e navegacao por toque/drag
+- [ ] Fechar com X, click fora ou Escape
+- [ ] Upload com preview no backoffice
+- [ ] Indicador de contagem (N/5)
+- [ ] Remover imagens individuais
+- [ ] Drag-and-drop para reordenar
+
+**Testes Existentes**:
+- Unit: `imageValidation.test.ts` (14 testes), `ImageGallery.test.tsx` (10 testes), `ImageUploader.test.tsx` (7 testes)
+- Integration: `menuItemImages.test.ts` (14 testes — upload, delete, reorder, auth, tenant, validacoes)
+- E2E: `menu-item-images.spec.ts` (4 testes — placeholder, thumbnail+galeria, contagem backoffice, delete)
 
 ---
 

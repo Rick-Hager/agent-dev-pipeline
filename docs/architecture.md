@@ -17,6 +17,7 @@ O projeto tambem serve como prova de conceito de um **pipeline de desenvolviment
 | UI | React + Tailwind CSS | React 19, Tailwind 4 |
 | Banco de Dados | PostgreSQL via Prisma ORM | Postgres 16, Prisma 7 |
 | Autenticacao | JWT (jose) + bcryptjs | HS256, HttpOnly cookie |
+| Storage | Vercel Blob | Imagens de produtos |
 | Notificacoes | WhatsApp via Twilio | Per-restaurant config |
 | Testes Unit/Integration | Vitest + React Testing Library | Vitest 4.x |
 | Testes E2E | Playwright | 1.59.x |
@@ -89,7 +90,7 @@ agent-dev-pipeline/
 ### Diagrama de Relacionamentos
 
 ```
-Restaurant (1) ──→ (N) Category (1) ──→ (N) MenuItem
+Restaurant (1) ──→ (N) Category (1) ──→ (N) MenuItem (1) ──→ (N) MenuItemImage
      │                                        │
      │                                        │ (ref, sem cascade)
      └──→ (N) Order (1) ──→ (N) OrderItem ───┘
@@ -161,6 +162,15 @@ Restaurant (1) ──→ (N) Category (1) ──→ (N) MenuItem
 | name | String | Nome no momento do pedido |
 | priceInCents | Int | Preco no momento do pedido |
 | quantity | Int | Quantidade |
+
+**MenuItemImage** — Imagem de um item do cardapio. Armazenada no Vercel Blob.
+
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| id | String (cuid) | PK |
+| menuItemId | String (FK) | Cascade delete |
+| url | String | URL da imagem no Vercel Blob |
+| sortOrder | Int | Ordem de exibicao (0 = imagem principal/thumbnail) |
 
 ### Enums
 
@@ -283,6 +293,7 @@ Todos devem passar para merge:
 
 | Variavel | Descricao |
 |----------|-----------|
+| `BLOB_READ_WRITE_TOKEN` | Token Vercel Blob para upload de imagens |
 | `STRIPE_WEBHOOK_SECRET` | Validacao de webhooks Stripe |
 | `TWILIO_ACCOUNT_SID` | Conta Twilio (fallback app-level) |
 | `TWILIO_AUTH_TOKEN` | Token Twilio |

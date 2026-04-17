@@ -25,7 +25,7 @@ Um projeto que demonstra um **pipeline de desenvolvimento agenticol**: humanos e
 
 ## Features Implementadas
 
-17 features implementadas por agentes:
+18 features implementadas por agentes:
 
 - Cardapio digital publico com QR code
 - Carrinho de compras (localStorage)
@@ -38,6 +38,7 @@ Um projeto que demonstra um **pipeline de desenvolvimento agenticol**: humanos e
 - CRUD completo de cardapio (categorias + itens)
 - Dashboard com metricas em tempo real
 - Configuracoes do restaurante
+- Galeria de imagens de produtos (upload Vercel Blob, swipe gallery, drag-and-drop)
 - Landing page com listagem de restaurantes
 
 Detalhes completos em [`docs/features.md`](docs/features.md).
