@@ -1,5 +1,4 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { prisma } from "@/lib/db";
 
 async function createRestaurant(
   request: APIRequestContext,
@@ -136,52 +135,19 @@ test.describe("Payments (MercadoPago)", () => {
     await expect(page).toHaveURL(new RegExp(`/${restaurant.slug}/pedido/`));
   });
 
-  test("mercadopago webhook updates approved payment to PAYMENT_APPROVED", async ({
-    page,
+  test("mercadopago webhook accepts payment notification and returns 200", async ({
     request,
   }) => {
-    const restaurant = await createRestaurant(request, "webhook-approved");
-    const category = await createCategory(request, restaurant.slug);
-    const item = await createItem(request, restaurant.slug, category.id, {
-      name: "Combo",
-      priceInCents: 2500,
-      sortOrder: 1,
-    });
-
-    // Place an order through the checkout flow first
-    await seedCart(page, restaurant.slug, [
-      { id: item.id, name: item.name, priceInCents: item.priceInCents, quantity: 1 },
-    ]);
-    await page.goto(`/${restaurant.slug}/checkout`);
-    await page.getByLabel("Nome").fill("Ana");
-    await page.getByLabel("Telefone").fill("11988776655");
-    await page.getByRole("button", { name: /ir para pagamento/i }).click();
-    await expect(page).toHaveURL(new RegExp(`/${restaurant.slug}/pedido/`));
-    const orderId = page.url().split("/pedido/")[1];
-
-    // Mark order as PAYMENT_PENDING and attach a payment id — mirrors the
-    // state after a successful preference creation and first webhook hit.
-    const paymentId = `mp_e2e_ok_${Date.now()}`;
-    await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        status: "PAYMENT_PENDING",
-        paymentMethod: "PIX",
-        mercadopagoPaymentId: paymentId,
-      },
-    });
-
-    // Stub the MercadoPago payment lookup by hitting the webhook with an
-    // approved status body — the webhook relies on external_reference which
-    // we already set via the order id.
+    // The webhook should accept valid payment notifications and return 200,
+    // even when no restaurant has MercadoPago configured (no access token).
     const res = await request.post("/api/webhooks/mercadopago", {
       data: {
         type: "payment",
-        data: { id: paymentId },
-        // The webhook is expected to return 200 whenever it can parse the body,
-        // even if it cannot resolve the payment (no MP access token configured).
+        data: { id: `mp_e2e_test_${Date.now()}` },
       },
     });
     expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body.received).toBe(true);
   });
 });
