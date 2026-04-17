@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const SENSITIVE_FIELDS = ["passwordHash", "stripeSecretKey", "whatsappApiConfig"];
+const SENSITIVE_FIELDS = ["passwordHash", "mercadopagoAccessToken", "whatsappApiConfig"];
 
 test.describe("Restaurant API", () => {
   const ts = Date.now();

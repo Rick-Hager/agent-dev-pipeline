@@ -77,20 +77,21 @@ test.describe("Backoffice Settings Page", () => {
     await expect(slugInput).toHaveValue(TEST_SLUG);
   });
 
-  // ─── Stripe section ────────────────────────────────────────────────────────
+  // ─── MercadoPago section ───────────────────────────────────────────────────
 
-  test("shows Stripe section with publishable and secret key fields", async ({
+  test("shows MercadoPago section with access token field (password input)", async ({
     page,
   }) => {
     await loginViaUI(page, TEST_EMAIL, TEST_PASSWORD);
     await page.goto("/backoffice/settings");
 
-    await expect(page.getByText("Stripe")).toBeVisible();
-    await expect(page.getByLabel(/publishable key/i)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /mercadopago/i })
+    ).toBeVisible();
 
-    const secretKeyInput = page.getByLabel(/secret key/i);
-    await expect(secretKeyInput).toBeVisible();
-    await expect(secretKeyInput).toHaveAttribute("type", "password");
+    const accessTokenInput = page.getByLabel(/access token/i);
+    await expect(accessTokenInput).toBeVisible();
+    await expect(accessTokenInput).toHaveAttribute("type", "password");
   });
 
   // ─── WhatsApp section ──────────────────────────────────────────────────────
@@ -149,13 +150,13 @@ test.describe("Backoffice Settings Page", () => {
     });
   });
 
-  test("updates stripe publishable key and shows success", async ({ page }) => {
+  test("updates mercadopago access token and shows success", async ({ page }) => {
     await loginViaUI(page, TEST_EMAIL, TEST_PASSWORD);
     await page.goto("/backoffice/settings");
 
-    const pkInput = page.getByLabel(/publishable key/i);
-    await pkInput.clear();
-    await pkInput.fill("pk_test_e2e_newkey");
+    const tokenInput = page.getByLabel(/access token/i);
+    await tokenInput.clear();
+    await tokenInput.fill("APP_USR-e2e-mp-token-example");
 
     await page.getByRole("button", { name: /salvar/i }).click();
 

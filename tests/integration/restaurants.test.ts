@@ -44,7 +44,7 @@ describe("POST /api/restaurants", () => {
 
     // Sensitive fields must never be returned
     expect(body.passwordHash).toBeUndefined();
-    expect(body.stripeSecretKey).toBeUndefined();
+    expect(body.mercadopagoAccessToken).toBeUndefined();
     expect(body.whatsappApiConfig).toBeUndefined();
   });
 
@@ -167,7 +167,7 @@ describe("POST /api/restaurants", () => {
 
     expect(response.status).toBe(201);
     expect(Object.keys(body)).not.toContain("passwordHash");
-    expect(Object.keys(body)).not.toContain("stripeSecretKey");
+    expect(Object.keys(body)).not.toContain("mercadopagoAccessToken");
     expect(Object.keys(body)).not.toContain("whatsappApiConfig");
   });
 });
@@ -245,7 +245,7 @@ describe("GET /api/restaurants/[slug]", () => {
 
     expect(response.status).toBe(200);
     expect(Object.keys(body)).not.toContain("passwordHash");
-    expect(Object.keys(body)).not.toContain("stripeSecretKey");
+    expect(Object.keys(body)).not.toContain("mercadopagoAccessToken");
     expect(Object.keys(body)).not.toContain("whatsappApiConfig");
   });
 });

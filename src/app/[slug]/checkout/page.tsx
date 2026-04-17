@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/components/CartProvider";
-import { PaymentForm } from "@/components/PaymentForm";
 
 function formatPrice(priceInCents: number): string {
   return `R$ ${(priceInCents / 100).toFixed(2).replace(".", ",")}`;
@@ -19,13 +18,6 @@ function applyPhoneMask(value: string): string {
 
 type PaymentMethod = "PIX" | "CARD";
 
-interface PaymentSession {
-  orderId: string;
-  clientSecret: string;
-  publishableKey: string;
-  paymentMethod: PaymentMethod;
-}
-
 export default function CheckoutPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
@@ -38,22 +30,6 @@ export default function CheckoutPage() {
   const [phoneError, setPhoneError] = useState("");
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [payment, setPayment] = useState<PaymentSession | null>(null);
-
-  if (payment) {
-    return (
-      <main className="max-w-lg mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">Finalize o pagamento</h1>
-        <PaymentForm
-          clientSecret={payment.clientSecret}
-          publishableKey={payment.publishableKey}
-          paymentMethod={payment.paymentMethod}
-          slug={slug}
-          orderId={payment.orderId}
-        />
-      </main>
-    );
-  }
 
   if (items.length === 0) {
     return (
@@ -105,25 +81,26 @@ export default function CheckoutPage() {
         }
       );
       if (!payRes.ok) {
-        // Payment initialization failed (e.g. restaurant has no Stripe keys).
-        // Order is already created — clear cart and show status page.
+        // Payment initialization failed (e.g. restaurant has no MercadoPago
+        // token). Order is already created — clear cart and show status page.
         clearCart();
         router.push(`/${slug}/pedido/${order.id}`);
         return;
       }
       const pay = (await payRes.json()) as {
-        clientSecret: string;
-        publishableKey: string;
+        redirectUrl: string;
+        preferenceId: string;
         paymentMethod: PaymentMethod;
       };
 
       clearCart();
-      setPayment({
-        orderId: order.id,
-        clientSecret: pay.clientSecret,
-        publishableKey: pay.publishableKey,
-        paymentMethod: pay.paymentMethod,
-      });
+
+      if (pay.redirectUrl) {
+        window.location.href = pay.redirectUrl;
+        return;
+      }
+
+      router.push(`/${slug}/pedido/${order.id}`);
     } catch {
       setApiError("Erro ao realizar pedido. Tente novamente.");
     } finally {
@@ -228,7 +205,7 @@ export default function CheckoutPage() {
           disabled={isSubmitting}
           className="w-full py-3 bg-zinc-900 text-white rounded-md font-medium disabled:opacity-50"
         >
-          Confirmar Pedido
+          Ir para pagamento
         </button>
       </form>
     </main>

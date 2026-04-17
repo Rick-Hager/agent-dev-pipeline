@@ -55,8 +55,9 @@ async function seedCart(
   slug: string,
   items: Array<{ id: string; name: string; priceInCents: number; quantity: number }>
 ) {
-  // Navigate to any page under the slug so the origin is correct
-  await page.goto(`/${slug}`);
+  // Navigate to a page outside the [slug] layout so CartProvider doesn't
+  // mount and overwrite localStorage with an empty cart via its useEffect.
+  await page.goto(`/backoffice/login`);
   await page.evaluate(
     ([cartKey, cartValue]) => {
       localStorage.setItem(cartKey, cartValue);
@@ -95,7 +96,7 @@ test.describe("Checkout page", () => {
     await page.getByLabel("Telefone").fill("11987654321");
 
     // Submit
-    await page.getByRole("button", { name: "Confirmar Pedido" }).click();
+    await page.getByRole("button", { name: /ir para pagamento/i }).click();
 
     // Should redirect to /${slug}/pedido/{orderId}
     await expect(page).toHaveURL(new RegExp(`/${restaurant.slug}/pedido/`));
@@ -187,7 +188,7 @@ test.describe("Checkout page", () => {
     await page.getByLabel("Telefone").fill("9876");
 
     // Submit the form
-    await page.getByRole("button", { name: "Confirmar Pedido" }).click();
+    await page.getByRole("button", { name: /ir para pagamento/i }).click();
 
     // Validation error should appear
     await expect(page.getByText("Telefone inválido")).toBeVisible();
@@ -207,7 +208,7 @@ test.describe("Checkout page", () => {
 
     // Form submit button should not be visible
     await expect(
-      page.getByRole("button", { name: "Confirmar Pedido" })
+      page.getByRole("button", { name: /ir para pagamento/i })
     ).not.toBeVisible();
   });
 
@@ -231,7 +232,7 @@ test.describe("Checkout page", () => {
 
     await page.getByLabel("Nome").fill("Ana Souza");
     await page.getByLabel("Telefone").fill("21987654321");
-    await page.getByRole("button", { name: "Confirmar Pedido" }).click();
+    await page.getByRole("button", { name: /ir para pagamento/i }).click();
 
     // Wait for redirect to order status page
     await expect(page).toHaveURL(new RegExp(`/${restaurant.slug}/pedido/`));

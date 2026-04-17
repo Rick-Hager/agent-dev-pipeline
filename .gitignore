@@ -55,3 +55,4 @@ playwright-report/
 coverage/
 
 /src/generated/prisma
+.env*.local

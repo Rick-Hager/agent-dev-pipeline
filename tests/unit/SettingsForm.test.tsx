@@ -10,8 +10,7 @@ const defaultSettings = {
   logo: "",
   email: "test@test.com",
   businessHours: "",
-  stripePublishableKey: "pk_test_abc123",
-  stripeSecretKeyMasked: "****3456" as string | null,
+  mercadopagoAccessTokenMasked: "****3456" as string | null,
   whatsappNumber: "",
   whatsappMessageTemplate: "",
 };
@@ -46,23 +45,30 @@ describe("SettingsForm", () => {
     expect(screen.getByLabelText(/horários de funcionamento/i)).toBeInTheDocument();
   });
 
-  it("renders the stripe publishable key input", () => {
+  it("renders the MercadoPago section heading", () => {
     render(<SettingsForm initialSettings={defaultSettings} slug="test-restaurant" />);
-    const pkInput = screen.getByLabelText(/publishable key/i);
-    expect(pkInput).toBeInTheDocument();
-    expect(pkInput).toHaveValue("pk_test_abc123");
+    expect(
+      screen.getByRole("heading", { name: /MercadoPago/i })
+    ).toBeInTheDocument();
   });
 
-  it("renders the stripe secret key input (masked)", () => {
+  it("renders the mercadopago access token input (masked/password)", () => {
     render(<SettingsForm initialSettings={defaultSettings} slug="test-restaurant" />);
-    const skInput = screen.getByLabelText(/secret key/i);
-    expect(skInput).toBeInTheDocument();
-    expect(skInput).toHaveAttribute("type", "password");
+    const tokenInput = screen.getByLabelText(/access token/i);
+    expect(tokenInput).toBeInTheDocument();
+    expect(tokenInput).toHaveAttribute("type", "password");
   });
 
-  it("shows the masked secret key hint when a key is already set", () => {
+  it("shows the masked token hint when a token is already set", () => {
     render(<SettingsForm initialSettings={defaultSettings} slug="test-restaurant" />);
     expect(screen.getByText(/\*\*\*\*3456/)).toBeInTheDocument();
+  });
+
+  it("does NOT render a Stripe section", () => {
+    render(<SettingsForm initialSettings={defaultSettings} slug="test-restaurant" />);
+    expect(
+      screen.queryByRole("heading", { name: /stripe/i })
+    ).not.toBeInTheDocument();
   });
 
   it("renders the whatsapp number input", () => {
@@ -118,7 +124,7 @@ describe("SettingsForm", () => {
     });
   });
 
-  it("does not include stripeSecretKey in PATCH body when field is empty", async () => {
+  it("does not include mercadopagoAccessToken in PATCH body when field is empty", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ ...defaultSettings }),
@@ -136,10 +142,10 @@ describe("SettingsForm", () => {
 
     const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     const body = JSON.parse(options.body as string);
-    expect(body.stripeSecretKey).toBeUndefined();
+    expect(body.mercadopagoAccessToken).toBeUndefined();
   });
 
-  it("includes stripeSecretKey in PATCH body when user types a new value", async () => {
+  it("includes mercadopagoAccessToken in PATCH body when user types a new value", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ ...defaultSettings }),
@@ -147,8 +153,8 @@ describe("SettingsForm", () => {
 
     render(<SettingsForm initialSettings={defaultSettings} slug="test-restaurant" />);
 
-    fireEvent.change(screen.getByLabelText(/secret key/i), {
-      target: { value: "sk_live_newvalue123" },
+    fireEvent.change(screen.getByLabelText(/access token/i), {
+      target: { value: "APP_USR_newvalue123" },
     });
 
     await act(async () => {
@@ -161,7 +167,7 @@ describe("SettingsForm", () => {
 
     const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     const body = JSON.parse(options.body as string);
-    expect(body.stripeSecretKey).toBe("sk_live_newvalue123");
+    expect(body.mercadopagoAccessToken).toBe("APP_USR_newvalue123");
   });
 
   it("calls PATCH on the correct settings endpoint", async () => {
@@ -226,7 +232,6 @@ describe("SettingsForm", () => {
       ).toBeInTheDocument();
     });
 
-    // fetch should NOT have been called (validation failed before network)
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });
