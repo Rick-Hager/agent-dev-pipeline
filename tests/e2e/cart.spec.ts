@@ -302,6 +302,41 @@ test.describe("Shopping Cart", () => {
     await expect(page.getByText("Seu carrinho está vazio.")).toBeVisible();
   });
 
+  test("Finalizar Pedido button navigates to checkout page", async ({
+    page,
+    request,
+  }) => {
+    const restaurant = await createRestaurant(request, "finalize1");
+    const category = await createCategory(request, restaurant.slug, "Lanches", 1);
+    await createItem(request, restaurant.slug, category.id, {
+      name: "X-Tudo",
+      priceInCents: 3000,
+      sortOrder: 1,
+    });
+
+    await page.goto(`/${restaurant.slug}`);
+    await page.getByRole("button", { name: "Adicionar" }).click();
+
+    await page.goto(`/${restaurant.slug}/cart`);
+
+    await page.getByRole("link", { name: "Finalizar Pedido" }).click();
+
+    await expect(page).toHaveURL(new RegExp(`/${restaurant.slug}/checkout$`));
+  });
+
+  test("empty cart does not show Finalizar Pedido button", async ({
+    page,
+    request,
+  }) => {
+    const restaurant = await createRestaurant(request, "finalize2");
+
+    await page.goto(`/${restaurant.slug}/cart`);
+
+    await expect(
+      page.getByRole("link", { name: "Finalizar Pedido" })
+    ).toHaveCount(0);
+  });
+
   test("cart badge link navigates to cart page", async ({ page, request }) => {
     const restaurant = await createRestaurant(request, "navlink1");
     const category = await createCategory(request, restaurant.slug, "Lanches", 1);
