@@ -143,7 +143,6 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay (MercadoPago)", () =
     const updated = await prisma.order.findUnique({ where: { id: orderId } });
     expect(updated?.status).toBe(OrderStatus.PAYMENT_PENDING);
     expect(updated?.paymentMethod).toBe("PIX");
-    expect(updated?.mercadopagoPreferenceId).toBe("pref_test_123");
   });
 
   it("creates a Preference with CARD", async () => {
@@ -278,7 +277,6 @@ describe("POST /api/webhooks/mercadopago", () => {
         totalInCents: 1500,
         status: OrderStatus.PAYMENT_PENDING,
         paymentMethod: "CARD",
-        mercadopagoPreferenceId: "pref_approved",
         items: {
           create: [
             { menuItemId, name: "Burger", priceInCents: 1500, quantity: 1 },
@@ -297,7 +295,6 @@ describe("POST /api/webhooks/mercadopago", () => {
         totalInCents: 1500,
         status: OrderStatus.PAYMENT_PENDING,
         paymentMethod: "PIX",
-        mercadopagoPreferenceId: "pref_rejected",
         items: {
           create: [
             { menuItemId, name: "Burger", priceInCents: 1500, quantity: 1 },
