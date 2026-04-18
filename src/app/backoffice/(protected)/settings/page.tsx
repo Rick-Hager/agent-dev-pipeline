@@ -30,6 +30,7 @@ export default async function SettingsPage() {
       email: true,
       businessHours: true,
       mercadopagoAccessToken: true,
+      mercadopagoPublicKey: true,
       whatsappNumber: true,
       whatsappMessageTemplate: true,
     },
@@ -49,6 +50,7 @@ export default async function SettingsPage() {
       ? JSON.stringify(restaurant.businessHours, null, 2)
       : "",
     mercadopagoAccessTokenMasked: maskSecret(restaurant.mercadopagoAccessToken),
+    mercadopagoPublicKeyMasked: maskSecret(restaurant.mercadopagoPublicKey),
     whatsappNumber: restaurant.whatsappNumber ?? "",
     whatsappMessageTemplate: restaurant.whatsappMessageTemplate ?? "",
   };

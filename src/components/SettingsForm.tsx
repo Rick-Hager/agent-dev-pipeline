@@ -9,6 +9,7 @@ export interface SettingsData {
   email: string;
   businessHours: string;
   mercadopagoAccessTokenMasked: string | null;
+  mercadopagoPublicKeyMasked: string | null;
   whatsappNumber: string;
   whatsappMessageTemplate: string;
 }
@@ -25,6 +26,7 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
     logo: initialSettings.logo,
     businessHours: initialSettings.businessHours,
     mercadopagoAccessToken: "",
+    mercadopagoPublicKey: "",
     whatsappNumber: initialSettings.whatsappNumber,
     whatsappMessageTemplate: initialSettings.whatsappMessageTemplate,
   });
@@ -54,8 +56,18 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
       whatsappMessageTemplate: form.whatsappMessageTemplate || null,
     };
 
-    if (form.mercadopagoAccessToken.length > 0) {
+    const hasAccess = form.mercadopagoAccessToken.length > 0;
+    const hasPublic = form.mercadopagoPublicKey.length > 0;
+    if (hasAccess !== hasPublic) {
+      setError(
+        "Informe Access Token e Public Key juntos (os dois ou nenhum)."
+      );
+      setLoading(false);
+      return;
+    }
+    if (hasAccess && hasPublic) {
       body.mercadopagoAccessToken = form.mercadopagoAccessToken;
+      body.mercadopagoPublicKey = form.mercadopagoPublicKey;
     }
 
     if (form.businessHours.trim()) {
@@ -175,8 +187,8 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
       <section className="bg-white rounded-lg shadow p-6 space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">MercadoPago</h2>
         <p className="text-sm text-gray-600">
-          Informe seu Access Token do MercadoPago. Os pagamentos serão
-          recebidos diretamente na conta do restaurante.
+          Informe Access Token e Public Key do MercadoPago. Os dois são necessários
+          para o checkout funcionar.
         </p>
 
         <div>
@@ -201,6 +213,33 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
               initialSettings.mercadopagoAccessTokenMasked
                 ? "Digite para alterar"
                 : "APP_USR_..."
+            }
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="mercadopagoPublicKey"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Public Key
+            {initialSettings.mercadopagoPublicKeyMasked && (
+              <span className="ml-2 text-gray-400 text-xs font-mono font-normal">
+                (atual: {initialSettings.mercadopagoPublicKeyMasked})
+              </span>
+            )}
+          </label>
+          <input
+            id="mercadopagoPublicKey"
+            name="mercadopagoPublicKey"
+            type="password"
+            value={form.mercadopagoPublicKey}
+            onChange={handleChange}
+            placeholder={
+              initialSettings.mercadopagoPublicKeyMasked
+                ? "Digite para alterar"
+                : "APP_USR_pk_..."
             }
             className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
           />
