@@ -180,4 +180,58 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay/card", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it("returns 404 when restaurant not found", async () => {
+    const { order } = await seed();
+    const req = new NextRequest(
+      `http://test/api/restaurants/nonexistent/orders/${order.id}/pay/card`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validBody()),
+      }
+    );
+    const res = await payCard(req, {
+      params: Promise.resolve({ slug: "nonexistent", orderId: order.id }),
+    });
+    expect(res.status).toBe(404);
+    expect(createCardPaymentMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when order not found or belongs to another restaurant", async () => {
+    await seed();
+    const req = new NextRequest(
+      `http://test/api/restaurants/test/orders/nonexistent-order-id/pay/card`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validBody()),
+      }
+    );
+    const res = await payCard(req, {
+      params: Promise.resolve({
+        slug: "test",
+        orderId: "nonexistent-order-id",
+      }),
+    });
+    expect(res.status).toBe(404);
+    expect(createCardPaymentMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 502 when MercadoPago throws", async () => {
+    const { order } = await seed();
+    createCardPaymentMock.mockRejectedValue(new Error("boom"));
+    const req = new NextRequest(
+      `http://test/api/restaurants/test/orders/${order.id}/pay/card`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validBody()),
+      }
+    );
+    const res = await payCard(req, {
+      params: Promise.resolve({ slug: "test", orderId: order.id }),
+    });
+    expect(res.status).toBe(502);
+  });
 });
