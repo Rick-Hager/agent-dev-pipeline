@@ -73,16 +73,16 @@ describe("createOrderPreference", () => {
     expect(items[0].unit_price).toBe(25);
     expect(items[0].quantity).toBe(1);
 
-    // payment_methods must restrict to PIX + Cartão — other methods excluded
+    // payment_methods must allow PIX + Cartão. In MercadoPago Brasil, PIX has
+    // payment_type "bank_transfer", so bank_transfer MUST NOT be excluded.
     const paymentMethods = body.payment_methods as {
       excluded_payment_types: Array<{ id: string }>;
     };
     expect(paymentMethods.excluded_payment_types).toEqual(
-      expect.arrayContaining([
-        { id: "ticket" },
-        { id: "atm" },
-        { id: "bank_transfer" },
-      ])
+      expect.arrayContaining([{ id: "ticket" }, { id: "atm" }])
+    );
+    expect(paymentMethods.excluded_payment_types).not.toEqual(
+      expect.arrayContaining([{ id: "bank_transfer" }])
     );
 
     expect(result.id).toBe("pref_123");

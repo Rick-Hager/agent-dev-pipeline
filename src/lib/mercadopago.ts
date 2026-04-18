@@ -57,11 +57,7 @@ export async function createOrderPreference(
       auto_return: "approved",
       notification_url: notificationUrl,
       payment_methods: {
-        excluded_payment_types: [
-          { id: "ticket" },
-          { id: "atm" },
-          { id: "bank_transfer" },
-        ],
+        excluded_payment_types: [{ id: "ticket" }, { id: "atm" }],
       },
       metadata: {
         order_id: params.orderId,
