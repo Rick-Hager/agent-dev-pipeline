@@ -77,6 +77,7 @@ describe("POST /api/restaurants/[slug]/orders", () => {
         body: JSON.stringify({
           customerName: "John Doe",
           customerPhone: "+5511999999999",
+          customerEmail: "test@example.com",
           items: [{ menuItemId, quantity: 2 }],
         }),
       }
@@ -112,6 +113,7 @@ describe("POST /api/restaurants/[slug]/orders", () => {
         body: JSON.stringify({
           customerName: "Jane Doe",
           customerPhone: "+5511888888888",
+          customerEmail: "test@example.com",
           items: [{ menuItemId, quantity: 1 }],
         }),
       }
@@ -141,6 +143,7 @@ describe("POST /api/restaurants/[slug]/orders", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerPhone: "+5511999999999",
+          customerEmail: "test@example.com",
           items: [{ menuItemId, quantity: 1 }],
         }),
       }
@@ -166,6 +169,7 @@ describe("POST /api/restaurants/[slug]/orders", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: "John Doe",
+          customerEmail: "test@example.com",
           items: [{ menuItemId, quantity: 1 }],
         }),
       }
@@ -192,6 +196,7 @@ describe("POST /api/restaurants/[slug]/orders", () => {
         body: JSON.stringify({
           customerName: "John Doe",
           customerPhone: "+5511999999999",
+          customerEmail: "test@example.com",
         }),
       }
     );
@@ -217,6 +222,7 @@ describe("POST /api/restaurants/[slug]/orders", () => {
         body: JSON.stringify({
           customerName: "John Doe",
           customerPhone: "+5511999999999",
+          customerEmail: "test@example.com",
           items: [],
         }),
       }
@@ -243,6 +249,7 @@ describe("POST /api/restaurants/[slug]/orders", () => {
         body: JSON.stringify({
           customerName: "John Doe",
           customerPhone: "+5511999999999",
+          customerEmail: "test@example.com",
           items: [{ menuItemId: "nonexistent-id", quantity: 1 }],
         }),
       }
@@ -269,6 +276,7 @@ describe("POST /api/restaurants/[slug]/orders", () => {
         body: JSON.stringify({
           customerName: "John Doe",
           customerPhone: "+5511999999999",
+          customerEmail: "test@example.com",
           items: [{ menuItemId: unavailableMenuItemId, quantity: 1 }],
         }),
       }
@@ -280,6 +288,83 @@ describe("POST /api/restaurants/[slug]/orders", () => {
 
     expect(response.status).toBe(400);
     expect(body.error).toBeDefined();
+  });
+
+  it("persists customerEmail on order", async () => {
+    const { POST } = await import(
+      "@/app/api/restaurants/[slug]/orders/route"
+    );
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/orders`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: "Maria",
+          customerPhone: "+5511999999999",
+          customerEmail: "maria@example.com",
+          items: [{ menuItemId, quantity: 1 }],
+        }),
+      }
+    );
+    const response = await POST(request, {
+      params: Promise.resolve({ slug: TEST_SLUG }),
+    });
+
+    expect(response.status).toBe(201);
+    const data = (await response.json()) as { id: string };
+    const order = await prisma.order.findUnique({ where: { id: data.id } });
+    expect(order?.customerEmail).toBe("maria@example.com");
+  });
+
+  it("returns 400 if customerEmail is missing", async () => {
+    const { POST } = await import(
+      "@/app/api/restaurants/[slug]/orders/route"
+    );
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/orders`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: "Maria",
+          customerPhone: "+5511999999999",
+          items: [{ menuItemId, quantity: 1 }],
+        }),
+      }
+    );
+    const response = await POST(request, {
+      params: Promise.resolve({ slug: TEST_SLUG }),
+    });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 if customerEmail is invalid", async () => {
+    const { POST } = await import(
+      "@/app/api/restaurants/[slug]/orders/route"
+    );
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/orders`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: "Maria",
+          customerPhone: "+5511999999999",
+          customerEmail: "not-an-email",
+          items: [{ menuItemId, quantity: 1 }],
+        }),
+      }
+    );
+    const response = await POST(request, {
+      params: Promise.resolve({ slug: TEST_SLUG }),
+    });
+
+    expect(response.status).toBe(400);
   });
 });
 
