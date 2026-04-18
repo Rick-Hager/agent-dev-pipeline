@@ -110,7 +110,7 @@ export async function createCardPayment(
       token: params.token,
       installments: 1,
       payment_method_id: params.paymentMethodId,
-      issuer_id: params.issuerId,
+      issuer_id: params.issuerId as unknown as number,
       external_reference: params.orderId,
       notification_url: `${params.baseUrl}/api/webhooks/mercadopago`,
       payer: {
