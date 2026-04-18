@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { OrderStatus, PaymentMethod } from "@prisma/client";
-import { createPixPayment } from "@/lib/mercadopago";
+import { createPixPayment, type CreatedPixPayment } from "@/lib/mercadopago";
 
 function resolveBaseUrl(request: NextRequest): string {
   if (process.env.NEXT_PUBLIC_APP_URL) {
@@ -44,7 +44,7 @@ export async function POST(
       );
     }
 
-    let pix;
+    let pix: CreatedPixPayment;
     try {
       pix = await createPixPayment(restaurant.mercadopagoAccessToken, {
         orderId: order.id,

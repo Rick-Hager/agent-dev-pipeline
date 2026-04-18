@@ -124,4 +124,33 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay/pix", () => {
     });
     expect(res.status).toBe(502);
   });
+
+  it("returns 404 when restaurant not found", async () => {
+    const { order } = await seed();
+    const req = new NextRequest(
+      `http://test/api/restaurants/nonexistent/orders/${order.id}/pay/pix`,
+      { method: "POST" }
+    );
+    const res = await payPix(req, {
+      params: Promise.resolve({ slug: "nonexistent", orderId: order.id }),
+    });
+    expect(res.status).toBe(404);
+    expect(createPixPaymentMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when order not found", async () => {
+    await seed();
+    const req = new NextRequest(
+      `http://test/api/restaurants/test/orders/nonexistent-order-id/pay/pix`,
+      { method: "POST" }
+    );
+    const res = await payPix(req, {
+      params: Promise.resolve({
+        slug: "test",
+        orderId: "nonexistent-order-id",
+      }),
+    });
+    expect(res.status).toBe(404);
+    expect(createPixPaymentMock).not.toHaveBeenCalled();
+  });
 });
