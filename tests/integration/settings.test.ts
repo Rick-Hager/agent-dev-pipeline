@@ -13,14 +13,12 @@ async function seed(opts: {
   accessToken?: string | null;
   publicKey?: string | null;
 } = {}) {
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.restaurant.deleteMany();
+  await prisma.restaurant.deleteMany({ where: { slug: "test-settings-integ" } });
   const restaurant = await prisma.restaurant.create({
     data: {
       name: "Test",
-      slug: "test",
-      email: "t@t.com",
+      slug: "test-settings-integ",
+      email: "settings-integ@t.com",
       passwordHash: "x",
       mercadopagoAccessToken: opts.accessToken ?? null,
       mercadopagoPublicKey: opts.publicKey ?? null,
@@ -44,7 +42,7 @@ describe("PATCH /api/restaurants/[slug]/settings — MP Public Key", () => {
   it("accepts accessToken and publicKey together", async () => {
     const { token } = await seed();
     const req = authed(
-      "http://test/api/restaurants/test/settings",
+      "http://test/api/restaurants/test-settings-integ/settings",
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -56,7 +54,7 @@ describe("PATCH /api/restaurants/[slug]/settings — MP Public Key", () => {
       token
     );
     const res = await patchSettings(req, {
-      params: Promise.resolve({ slug: "test" }),
+      params: Promise.resolve({ slug: "test-settings-integ" }),
     });
     expect(res.status).toBe(200);
   });
@@ -64,7 +62,7 @@ describe("PATCH /api/restaurants/[slug]/settings — MP Public Key", () => {
   it("rejects setting only accessToken without publicKey (400)", async () => {
     const { token } = await seed();
     const req = authed(
-      "http://test/api/restaurants/test/settings",
+      "http://test/api/restaurants/test-settings-integ/settings",
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -75,7 +73,7 @@ describe("PATCH /api/restaurants/[slug]/settings — MP Public Key", () => {
       token
     );
     const res = await patchSettings(req, {
-      params: Promise.resolve({ slug: "test" }),
+      params: Promise.resolve({ slug: "test-settings-integ" }),
     });
     expect(res.status).toBe(400);
   });
@@ -83,7 +81,7 @@ describe("PATCH /api/restaurants/[slug]/settings — MP Public Key", () => {
   it("rejects setting only publicKey without accessToken (400)", async () => {
     const { token } = await seed();
     const req = authed(
-      "http://test/api/restaurants/test/settings",
+      "http://test/api/restaurants/test-settings-integ/settings",
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -94,7 +92,7 @@ describe("PATCH /api/restaurants/[slug]/settings — MP Public Key", () => {
       token
     );
     const res = await patchSettings(req, {
-      params: Promise.resolve({ slug: "test" }),
+      params: Promise.resolve({ slug: "test-settings-integ" }),
     });
     expect(res.status).toBe(400);
   });
@@ -105,7 +103,7 @@ describe("PATCH /api/restaurants/[slug]/settings — MP Public Key", () => {
       publicKey: "APP_USR_pk_existing",
     });
     const req = authed(
-      "http://test/api/restaurants/test/settings",
+      "http://test/api/restaurants/test-settings-integ/settings",
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -114,7 +112,7 @@ describe("PATCH /api/restaurants/[slug]/settings — MP Public Key", () => {
       token
     );
     const res = await patchSettings(req, {
-      params: Promise.resolve({ slug: "test" }),
+      params: Promise.resolve({ slug: "test-settings-integ" }),
     });
     expect(res.status).toBe(200);
   });
@@ -125,12 +123,12 @@ describe("PATCH /api/restaurants/[slug]/settings — MP Public Key", () => {
       publicKey: "APP_USR_pk_ijklmnop5678",
     });
     const req = authed(
-      "http://test/api/restaurants/test/settings",
+      "http://test/api/restaurants/test-settings-integ/settings",
       { method: "GET" },
       token
     );
     const res = await getSettings(req, {
-      params: Promise.resolve({ slug: "test" }),
+      params: Promise.resolve({ slug: "test-settings-integ" }),
     });
     expect(res.status).toBe(200);
     const data = (await res.json()) as Record<string, unknown>;

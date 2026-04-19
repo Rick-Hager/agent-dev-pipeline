@@ -13,17 +13,13 @@ const createCardPaymentMock = vi.mocked(mp.createCardPayment);
 import { POST as payCard } from "@/app/api/restaurants/[slug]/orders/[orderId]/pay/card/route";
 
 async function seed(opts: { accessToken?: string | null } = {}) {
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.menuItem.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.restaurant.deleteMany();
+  await prisma.restaurant.deleteMany({ where: { slug: "test-card-integ" } });
 
   const restaurant = await prisma.restaurant.create({
     data: {
       name: "Test",
-      slug: "test",
-      email: "t@t.com",
+      slug: "test-card-integ",
+      email: "card-integ@t.com",
       passwordHash: "x",
       mercadopagoAccessToken:
         opts.accessToken === null ? null : opts.accessToken ?? "APP_USR_token",
@@ -74,7 +70,7 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay/card", () => {
       }
     );
     const res = await payCard(req, {
-      params: Promise.resolve({ slug: "test", orderId: order.id }),
+      params: Promise.resolve({ slug: "test-card-integ", orderId: order.id }),
     });
 
     expect(res.status).toBe(200);
@@ -103,7 +99,7 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay/card", () => {
       }
     );
     const res = await payCard(req, {
-      params: Promise.resolve({ slug: "test", orderId: order.id }),
+      params: Promise.resolve({ slug: "test-card-integ", orderId: order.id }),
     });
     expect(res.status).toBe(200);
     const updated = await prisma.order.findUnique({ where: { id: order.id } });
@@ -126,7 +122,7 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay/card", () => {
       }
     );
     const res = await payCard(req, {
-      params: Promise.resolve({ slug: "test", orderId: order.id }),
+      params: Promise.resolve({ slug: "test-card-integ", orderId: order.id }),
     });
     expect(res.status).toBe(402);
     const updated = await prisma.order.findUnique({ where: { id: order.id } });
@@ -144,7 +140,7 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay/card", () => {
       }
     );
     const res = await payCard(req, {
-      params: Promise.resolve({ slug: "test", orderId: order.id }),
+      params: Promise.resolve({ slug: "test-card-integ", orderId: order.id }),
     });
     expect(res.status).toBe(400);
   });
@@ -160,7 +156,7 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay/card", () => {
       }
     );
     const res = await payCard(req, {
-      params: Promise.resolve({ slug: "test", orderId: order.id }),
+      params: Promise.resolve({ slug: "test-card-integ", orderId: order.id }),
     });
     expect(res.status).toBe(400);
   });
@@ -176,7 +172,7 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay/card", () => {
       }
     );
     const res = await payCard(req, {
-      params: Promise.resolve({ slug: "test", orderId: order.id }),
+      params: Promise.resolve({ slug: "test-card-integ", orderId: order.id }),
     });
     expect(res.status).toBe(400);
   });
@@ -210,7 +206,7 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay/card", () => {
     );
     const res = await payCard(req, {
       params: Promise.resolve({
-        slug: "test",
+        slug: "test-card-integ",
         orderId: "nonexistent-order-id",
       }),
     });
@@ -230,7 +226,7 @@ describe("POST /api/restaurants/[slug]/orders/[orderId]/pay/card", () => {
       }
     );
     const res = await payCard(req, {
-      params: Promise.resolve({ slug: "test", orderId: order.id }),
+      params: Promise.resolve({ slug: "test-card-integ", orderId: order.id }),
     });
     expect(res.status).toBe(502);
   });

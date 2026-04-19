@@ -4,14 +4,12 @@ import { NextRequest } from "next/server";
 import { GET as getOrder } from "@/app/api/restaurants/[slug]/orders/[orderId]/route";
 
 async function seed() {
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.restaurant.deleteMany();
+  await prisma.restaurant.deleteMany({ where: { slug: "test-orders-get-integ" } });
   const r = await prisma.restaurant.create({
     data: {
       name: "Test",
-      slug: "test",
-      email: "t@t.com",
+      slug: "test-orders-get-integ",
+      email: "orders-get-integ@t.com",
       passwordHash: "x",
     },
   });
@@ -43,7 +41,7 @@ describe("GET /api/restaurants/[slug]/orders/[orderId] — PIX fields", () => {
       `http://test/api/restaurants/test/orders/${order.id}`
     );
     const res = await getOrder(req, {
-      params: Promise.resolve({ slug: "test", orderId: order.id }),
+      params: Promise.resolve({ slug: "test-orders-get-integ", orderId: order.id }),
     });
     expect(res.status).toBe(200);
     const data = (await res.json()) as Record<string, unknown>;
