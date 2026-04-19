@@ -6,6 +6,8 @@ import {
   generateOrderNumber,
 } from "@/lib/orderUtils";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -27,10 +29,11 @@ export async function POST(
     const body = await request.json() as {
       customerName?: unknown;
       customerPhone?: unknown;
+      customerEmail?: unknown;
       items?: unknown;
     };
 
-    const { customerName, customerPhone, items } = body;
+    const { customerName, customerPhone, customerEmail, items } = body;
 
     if (!customerName || typeof customerName !== "string") {
       return NextResponse.json(
@@ -42,6 +45,17 @@ export async function POST(
     if (!customerPhone || typeof customerPhone !== "string") {
       return NextResponse.json(
         { error: "customerPhone is required" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !customerEmail ||
+      typeof customerEmail !== "string" ||
+      !EMAIL_RE.test(customerEmail)
+    ) {
+      return NextResponse.json(
+        { error: "customerEmail is required and must be a valid email" },
         { status: 400 }
       );
     }
@@ -107,6 +121,7 @@ export async function POST(
             orderNumber,
             customerName,
             customerPhone,
+            customerEmail,
             totalInCents,
             status: OrderStatus.CREATED,
             items: {

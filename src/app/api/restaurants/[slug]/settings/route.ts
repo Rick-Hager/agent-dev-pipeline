@@ -9,7 +9,6 @@ const SAFE_SELECT = {
   logo: true,
   email: true,
   businessHours: true,
-  stripePublishableKey: true,
   whatsappNumber: true,
   whatsappMessageTemplate: true,
   updatedAt: true,
@@ -52,8 +51,8 @@ export async function GET(
       logo: restaurant.logo,
       email: restaurant.email,
       businessHours: restaurant.businessHours,
-      stripePublishableKey: restaurant.stripePublishableKey,
-      stripeSecretKeyMasked: maskSecret(restaurant.stripeSecretKey),
+      mercadopagoAccessTokenMasked: maskSecret(restaurant.mercadopagoAccessToken),
+      mercadopagoPublicKeyMasked: maskSecret(restaurant.mercadopagoPublicKey),
       whatsappNumber: restaurant.whatsappNumber,
       whatsappMessageTemplate: restaurant.whatsappMessageTemplate,
       updatedAt: restaurant.updatedAt,
@@ -100,7 +99,6 @@ export async function PATCH(
 
     const input = body as Record<string, unknown>;
 
-    // Validate slug uniqueness if slug is being changed
     const newSlug = typeof input.slug === "string" ? input.slug : undefined;
     if (newSlug !== undefined && newSlug !== slug) {
       const existing = await prisma.restaurant.findUnique({
@@ -114,7 +112,6 @@ export async function PATCH(
       }
     }
 
-    // Build update — only allowed fields; passwordHash is never touched
     const updateData: Record<string, unknown> = {};
 
     if (typeof input.name === "string" && input.name.trim().length > 0) {
@@ -131,18 +128,47 @@ export async function PATCH(
     if (input.businessHours !== undefined) {
       updateData.businessHours = input.businessHours ?? null;
     }
-    if (input.stripePublishableKey !== undefined) {
-      updateData.stripePublishableKey =
-        typeof input.stripePublishableKey === "string" &&
-        input.stripePublishableKey.length > 0
-          ? input.stripePublishableKey
-          : null;
+    const accessTokenInput = input.mercadopagoAccessToken;
+    const publicKeyInput = input.mercadopagoPublicKey;
+    const patchingAccess = accessTokenInput !== undefined;
+    const patchingPublic = publicKeyInput !== undefined;
+
+    if (patchingAccess !== patchingPublic) {
+      return NextResponse.json(
+        {
+          error:
+            "mercadopagoAccessToken and mercadopagoPublicKey must be provided together",
+        },
+        { status: 400 }
+      );
     }
-    if (
-      typeof input.stripeSecretKey === "string" &&
-      input.stripeSecretKey.length > 0
-    ) {
-      updateData.stripeSecretKey = input.stripeSecretKey;
+
+    if (patchingAccess && patchingPublic) {
+      if (typeof accessTokenInput !== "string") {
+        return NextResponse.json(
+          { error: "mercadopagoAccessToken must be a string" },
+          { status: 400 }
+        );
+      }
+      if (typeof publicKeyInput !== "string") {
+        return NextResponse.json(
+          { error: "mercadopagoPublicKey must be a string" },
+          { status: 400 }
+        );
+      }
+      const at = accessTokenInput.trim();
+      const pk = publicKeyInput.trim();
+      if (at.length === 0 || pk.length === 0) {
+        return NextResponse.json(
+          {
+            error:
+              "mercadopagoAccessToken and mercadopagoPublicKey cannot be empty",
+          },
+          { status: 400 }
+        );
+      }
+      updateData.mercadopagoAccessToken = at;
+      updateData.mercadopagoPublicKey = pk;
     }
     if (input.whatsappNumber !== undefined) {
       updateData.whatsappNumber =

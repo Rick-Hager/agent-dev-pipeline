@@ -46,26 +46,7 @@ async function createItem(
   return res.json();
 }
 
-async function seedCart(
-  page: import("@playwright/test").Page,
-  slug: string,
-  items: Array<{
-    id: string;
-    name: string;
-    priceInCents: number;
-    quantity: number;
-  }>
-) {
-  await page.goto(`/${slug}`);
-  await page.evaluate(
-    ([cartKey, cartValue]) => {
-      localStorage.setItem(cartKey, cartValue);
-    },
-    [`cart:${slug}`, JSON.stringify(items)]
-  );
-}
-
-/** Place an order through checkout and return the orderId from the redirect URL. */
+/** Create an order via the API and navigate to its status page. */
 async function placeOrder(
   page: import("@playwright/test").Page,
   request: APIRequestContext,
@@ -79,15 +60,18 @@ async function placeOrder(
   customerName = "João Teste",
   phone = "11987654321"
 ): Promise<string> {
-  await seedCart(page, slug, items);
-  await page.goto(`/${slug}/checkout`);
-  await page.getByLabel("Nome").fill(customerName);
-  await page.getByLabel("Telefone").fill(phone);
-  await page.getByRole("button", { name: "Confirmar Pedido" }).click();
-  await expect(page).toHaveURL(new RegExp(`/${slug}/pedido/`));
-  const url = page.url();
-  const orderId = url.split("/pedido/")[1];
-  return orderId;
+  const res = await request.post(`/api/restaurants/${slug}/orders`, {
+    data: {
+      customerName,
+      customerPhone: phone,
+      customerEmail: "e2e@test.com",
+      items: items.map((i) => ({ menuItemId: i.id, quantity: i.quantity })),
+    },
+  });
+  expect(res.status()).toBe(201);
+  const body = (await res.json()) as { id: string };
+  await page.goto(`/${slug}/pedido/${body.id}`);
+  return body.id;
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -318,17 +302,19 @@ test.describe("Order Status Page", () => {
       sortOrder: 2,
     });
 
-    await seedCart(page, restaurant.slug, [
-      { id: item1.id, name: item1.name, priceInCents: item1.priceInCents, quantity: 2 },
-      { id: item2.id, name: item2.name, priceInCents: item2.priceInCents, quantity: 1 },
-    ]);
+    await placeOrder(
+      page,
+      request,
+      restaurant.slug,
+      [
+        { id: item1.id, name: item1.name, priceInCents: item1.priceInCents, quantity: 2 },
+        { id: item2.id, name: item2.name, priceInCents: item2.priceInCents, quantity: 1 },
+      ],
+      "Fernanda Lima",
+      "31987654321"
+    );
 
-    await page.goto(`/${restaurant.slug}/checkout`);
-    await page.getByLabel("Nome").fill("Fernanda Lima");
-    await page.getByLabel("Telefone").fill("31987654321");
-    await page.getByRole("button", { name: "Confirmar Pedido" }).click();
-
-    // Should redirect to order status page
+    // Should be on order status page
     await expect(page).toHaveURL(new RegExp(`/${restaurant.slug}/pedido/`));
 
     // Order number heading

@@ -57,6 +57,13 @@ export default function CartPage() {
             <span>{formatPrice(totalInCents)}</span>
           </div>
 
+          <Link
+            href={`/${slug}/checkout`}
+            className="block w-full py-2 bg-zinc-900 text-white text-center rounded-md mb-3"
+          >
+            Finalizar Pedido
+          </Link>
+
           <button
             onClick={clearCart}
             className="w-full py-2 border border-zinc-900 text-zinc-900 rounded-md mb-4"

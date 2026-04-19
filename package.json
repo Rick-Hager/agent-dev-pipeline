@@ -22,17 +22,15 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
-    "@stripe/react-stripe-js": "^6.2.0",
-    "@stripe/stripe-js": "^9.2.0",
     "@types/bcryptjs": "^2.4.6",
     "@vercel/blob": "^2.3.3",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.2",
+    "mercadopago": "^2.12.0",
     "next": "16.2.3",
     "pg": "^8.16.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "stripe": "^22.0.2",
     "twilio": "^5.13.1"
   },
   "devDependencies": {
@@ -40,6 +38,7 @@
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
         logo: true,
         email: true,
         businessHours: true,
-        stripePublishableKey: true,
         whatsappNumber: true,
         whatsappMessageTemplate: true,
         createdAt: true,

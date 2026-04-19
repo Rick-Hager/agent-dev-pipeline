@@ -3,12 +3,11 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 import React from "react";
 
 // Hoisted mocks
-const { useCartMock, useRouterMock, useParamsMock, paymentFormMock } = vi.hoisted(() => {
+const { useCartMock, useRouterMock, useParamsMock } = vi.hoisted(() => {
   const useCartMock = vi.fn();
   const useRouterMock = vi.fn();
   const useParamsMock = vi.fn();
-  const paymentFormMock = vi.fn();
-  return { useCartMock, useRouterMock, useParamsMock, paymentFormMock };
+  return { useCartMock, useRouterMock, useParamsMock };
 });
 
 vi.mock("@/components/CartProvider", () => ({
@@ -18,17 +17,6 @@ vi.mock("@/components/CartProvider", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: useRouterMock,
   useParams: useParamsMock,
-}));
-
-vi.mock("@/components/PaymentForm", () => ({
-  PaymentForm: (props: Record<string, unknown>) => {
-    paymentFormMock(props);
-    return React.createElement(
-      "div",
-      { "data-testid": "payment-form" },
-      `PaymentForm: ${String(props.paymentMethod)}`
-    );
-  },
 }));
 
 import CheckoutPage from "@/app/[slug]/checkout/page";
@@ -52,11 +40,26 @@ function setupMocks(items = fakeItems) {
   });
 }
 
+function fillCommonFields() {
+  fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
+  fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
+  fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "maria@example.com" } });
+}
+
+function submitForm(buttonName: RegExp) {
+  return act(async () => {
+    fireEvent.submit(
+      screen.getByRole("button", { name: buttonName }).closest("form")!
+    );
+  });
+}
+
 describe("CheckoutPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupMocks();
     global.fetch = vi.fn();
+    sessionStorage.clear();
   });
 
   it("renders back link to cart", () => {
@@ -99,9 +102,24 @@ describe("CheckoutPage", () => {
     expect(screen.getByLabelText("Telefone")).toBeInTheDocument();
   });
 
-  it("renders submit button labeled Confirmar Pedido", () => {
+  it("renders customerEmail input with label E-mail", () => {
     render(<CheckoutPage />);
-    expect(screen.getByRole("button", { name: "Confirmar Pedido" })).toBeInTheDocument();
+    expect(screen.getByLabelText("E-mail")).toBeInTheDocument();
+  });
+
+  it('renders submit button labeled "Pagar com PIX" by default', () => {
+    render(<CheckoutPage />);
+    expect(
+      screen.getByRole("button", { name: /pagar com pix/i })
+    ).toBeInTheDocument();
+  });
+
+  it('button label changes to "Ir para o pagamento" when Cartão selected', () => {
+    render(<CheckoutPage />);
+    fireEvent.click(screen.getByLabelText(/Cart[ãa]o/i));
+    expect(
+      screen.getByRole("button", { name: /ir para o pagamento/i })
+    ).toBeInTheDocument();
   });
 
   it("renders payment method radios PIX and Cartão", () => {
@@ -115,6 +133,13 @@ describe("CheckoutPage", () => {
     expect((screen.getByLabelText(/PIX/i) as HTMLInputElement).checked).toBe(true);
   });
 
+  it("shows CPF input only when Cartão is selected", () => {
+    render(<CheckoutPage />);
+    expect(screen.queryByLabelText(/CPF/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/Cart[ãa]o/i));
+    expect(screen.getByLabelText(/CPF/i)).toBeInTheDocument();
+  });
+
   it("shows empty cart message and menu link when cart is empty", () => {
     setupMocks([]);
     render(<CheckoutPage />);
@@ -126,7 +151,9 @@ describe("CheckoutPage", () => {
   it("does not render form when cart is empty", () => {
     setupMocks([]);
     render(<CheckoutPage />);
-    expect(screen.queryByRole("button", { name: "Confirmar Pedido" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /pagar com pix/i })
+    ).not.toBeInTheDocument();
   });
 
   it("applies Brazilian phone mask as user types", async () => {
@@ -149,17 +176,23 @@ describe("CheckoutPage", () => {
 
   it("shows inline error if phone has fewer than 10 digits on submit", async () => {
     render(<CheckoutPage />);
-    const nameInput = screen.getByLabelText("Nome");
-    const phoneInput = screen.getByLabelText("Telefone");
-    fireEvent.change(nameInput, { target: { value: "João" } });
-    fireEvent.change(phoneInput, { target: { value: "123" } });
-    await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
-    });
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "João" } });
+    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "123" } });
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "j@ex.com" } });
+    await submitForm(/pagar com pix/i);
     expect(screen.getByText("Telefone inválido")).toBeInTheDocument();
   });
 
-  it("submits form: creates order then payment intent with PIX by default", async () => {
+  it("shows inline error if email is invalid on submit", async () => {
+    render(<CheckoutPage />);
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "João" } });
+    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "not-an-email" } });
+    await submitForm(/pagar com pix/i);
+    expect(screen.getByText("E-mail inválido")).toBeInTheDocument();
+  });
+
+  it("PIX submit: creates order then calls /pay/pix (no body) and routes to order page", async () => {
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
@@ -167,20 +200,12 @@ describe("CheckoutPage", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
-          clientSecret: "pi_secret",
-          publishableKey: "pk_test_123",
-          paymentMethod: "PIX",
-          paymentIntentId: "pi_123",
-        }),
+        json: async () => ({ paymentId: "PAY_1" }),
       });
     render(<CheckoutPage />);
-    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
-    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
-    await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
-    });
-    // First call: create order
+    fillCommonFields();
+    await submitForm(/pagar com pix/i);
+
     expect(global.fetch).toHaveBeenNthCalledWith(
       1,
       "/api/restaurants/lanche-do-ze/orders",
@@ -189,6 +214,7 @@ describe("CheckoutPage", () => {
         body: JSON.stringify({
           customerName: "Maria Silva",
           customerPhone: "11987654321",
+          customerEmail: "maria@example.com",
           items: [
             { menuItemId: "item-1", quantity: 2 },
             { menuItemId: "item-2", quantity: 1 },
@@ -196,84 +222,52 @@ describe("CheckoutPage", () => {
         }),
       })
     );
-    // Second call: create payment intent with PIX
     expect(global.fetch).toHaveBeenNthCalledWith(
       2,
-      "/api/restaurants/lanche-do-ze/orders/order-abc/pay",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ paymentMethod: "PIX" }),
-      })
+      "/api/restaurants/lanche-do-ze/orders/order-abc/pay/pix",
+      expect.objectContaining({ method: "POST" })
     );
-  });
-
-  it("sends paymentMethod CARD when user selects Cartão", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ id: "order-abc", orderNumber: 5 }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          clientSecret: "pi_secret",
-          publishableKey: "pk_test_123",
-          paymentMethod: "CARD",
-          paymentIntentId: "pi_123",
-        }),
-      });
-    render(<CheckoutPage />);
-    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
-    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
-    fireEvent.click(screen.getByLabelText(/Cart[ãa]o/i));
-    await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
-    });
-    expect(global.fetch).toHaveBeenNthCalledWith(
-      2,
-      "/api/restaurants/lanche-do-ze/orders/order-abc/pay",
-      expect.objectContaining({
-        body: JSON.stringify({ paymentMethod: "CARD" }),
-      })
-    );
-  });
-
-  it("renders PaymentForm with returned clientSecret after successful order+pay", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ id: "order-abc", orderNumber: 5 }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          clientSecret: "pi_secret_xyz",
-          publishableKey: "pk_test_123",
-          paymentMethod: "PIX",
-          paymentIntentId: "pi_123",
-        }),
-      });
-    render(<CheckoutPage />);
-    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
-    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
-    await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
-    });
     await waitFor(() => {
-      expect(screen.getByTestId("payment-form")).toBeInTheDocument();
+      expect(pushMock).toHaveBeenCalledWith("/lanche-do-ze/pedido/order-abc");
     });
-    expect(paymentFormMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        clientSecret: "pi_secret_xyz",
-        publishableKey: "pk_test_123",
-        paymentMethod: "PIX",
-        slug: "lanche-do-ze",
-        orderId: "order-abc",
-      })
-    );
   });
 
-  it("clears cart on successful order creation", async () => {
+  it("CARD submit: creates order, stores CPF in sessionStorage, routes to /checkout/cartao/[orderId]", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: "order-abc", orderNumber: 5 }),
+    });
+    render(<CheckoutPage />);
+    fillCommonFields();
+    fireEvent.click(screen.getByLabelText(/Cart[ãa]o/i));
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "191.191.191-00" },
+    });
+    await submitForm(/ir para o pagamento/i);
+
+    // Only one fetch (order creation); no /pay/pix call
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem("order-order-abc-cpf")).toBe("19119119100");
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith(
+        "/lanche-do-ze/checkout/cartao/order-abc"
+      );
+    });
+  });
+
+  it("CARD submit: rejects if CPF is invalid", async () => {
+    render(<CheckoutPage />);
+    fillCommonFields();
+    fireEvent.click(screen.getByLabelText(/Cart[ãa]o/i));
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "123" },
+    });
+    await submitForm(/ir para o pagamento/i);
+    expect(screen.getByText("CPF inválido")).toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("clears cart on successful PIX flow", async () => {
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
@@ -281,37 +275,49 @@ describe("CheckoutPage", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
-          clientSecret: "pi_secret",
-          publishableKey: "pk_test_123",
-          paymentMethod: "PIX",
-          paymentIntentId: "pi_123",
-        }),
+        json: async () => ({ paymentId: "PAY_1" }),
       });
     render(<CheckoutPage />);
-    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
-    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
-    await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
-    });
+    fillCommonFields();
+    await submitForm(/pagar com pix/i);
     await waitFor(() => {
       expect(clearCartMock).toHaveBeenCalled();
     });
   });
 
-  it("shows error message on API failure", async () => {
+  it("shows PIX error message when /pay/pix fails", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: "order-abc", orderNumber: 5 }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: "no token" }),
+      });
+    render(<CheckoutPage />);
+    fillCommonFields();
+    await submitForm(/pagar com pix/i);
+    await waitFor(() => {
+      expect(
+        screen.getByText("Não foi possível gerar o PIX. Tente novamente.")
+      ).toBeInTheDocument();
+    });
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("shows error message on order API failure", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: "Server error" }),
     });
     render(<CheckoutPage />);
-    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
-    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
-    await act(async () => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
-    });
+    fillCommonFields();
+    await submitForm(/pagar com pix/i);
     await waitFor(() => {
-      expect(screen.getByText("Erro ao realizar pedido. Tente novamente.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Erro ao realizar pedido. Tente novamente.")
+      ).toBeInTheDocument();
     });
   });
 
@@ -322,13 +328,14 @@ describe("CheckoutPage", () => {
     });
     (global.fetch as ReturnType<typeof vi.fn>).mockReturnValueOnce(pendingPromise);
     render(<CheckoutPage />);
-    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Maria Silva" } });
-    fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
+    fillCommonFields();
     act(() => {
-      fireEvent.submit(screen.getByRole("button", { name: "Confirmar Pedido" }).closest("form")!);
+      fireEvent.submit(
+        screen.getByRole("button", { name: /pagar com pix/i }).closest("form")!
+      );
     });
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /confirmar pedido/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /pagar com pix/i })).toBeDisabled();
     });
     act(() => {
       resolvePromise!({ ok: false, json: async () => ({}) });

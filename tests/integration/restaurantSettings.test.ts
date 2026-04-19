@@ -27,8 +27,7 @@ beforeAll(async () => {
       slug: TEST_SLUG,
       email: TEST_EMAIL,
       passwordHash,
-      stripeSecretKey: "sk_test_abcdef1234",
-      stripePublishableKey: "pk_test_abcdef1234",
+      mercadopagoAccessToken: "APP_USR_abcdef1234",
     },
   });
   restaurantId = r1.id;
@@ -94,10 +93,9 @@ describe("GET /api/restaurants/[slug]/settings", () => {
     expect(body.name).toBe("Settings Int Test Restaurant");
     expect(body.slug).toBe(TEST_SLUG);
     expect(body.email).toBe(TEST_EMAIL);
-    expect(body.stripePublishableKey).toBe("pk_test_abcdef1234");
   });
 
-  it("returns masked stripeSecretKey, never the full key", async () => {
+  it("returns masked mercadopagoAccessToken, never the full token", async () => {
     const { GET } = await import("@/app/api/restaurants/[slug]/settings/route");
     const token = await makeToken(restaurantId, TEST_SLUG, TEST_EMAIL);
     const req = new NextRequest(
@@ -108,12 +106,11 @@ describe("GET /api/restaurants/[slug]/settings", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    // stripeSecretKeyMasked should be present and partially masked
-    expect(body.stripeSecretKeyMasked).toBeDefined();
-    expect(body.stripeSecretKeyMasked).not.toBe("sk_test_abcdef1234");
-    expect(body.stripeSecretKeyMasked).toContain("1234");
-    // Full secret key must never appear
-    expect(body.stripeSecretKey).toBeUndefined();
+    expect(body.mercadopagoAccessTokenMasked).toBeDefined();
+    expect(body.mercadopagoAccessTokenMasked).not.toBe("APP_USR_abcdef1234");
+    expect(body.mercadopagoAccessTokenMasked).toContain("1234");
+    // Full token must never appear
+    expect(body.mercadopagoAccessToken).toBeUndefined();
     expect(body.passwordHash).toBeUndefined();
   });
 });
@@ -130,8 +127,7 @@ describe("PATCH /api/restaurants/[slug]/settings", () => {
         slug: TEST_SLUG,
         logo: null,
         businessHours: Prisma.DbNull,
-        stripePublishableKey: "pk_test_abcdef1234",
-        stripeSecretKey: "sk_test_abcdef1234",
+        mercadopagoAccessToken: "APP_USR_abcdef1234",
         whatsappNumber: null,
         whatsappMessageTemplate: null,
       },
@@ -195,7 +191,7 @@ describe("PATCH /api/restaurants/[slug]/settings", () => {
     expect(body.logo).toBe("https://example.com/logo.png");
     // Sensitive fields must never be in response
     expect(body.passwordHash).toBeUndefined();
-    expect(body.stripeSecretKey).toBeUndefined();
+    expect(body.mercadopagoAccessToken).toBeUndefined();
   });
 
   it("allows keeping the same slug", async () => {
@@ -290,7 +286,7 @@ describe("PATCH /api/restaurants/[slug]/settings", () => {
     expect(restaurant!.passwordHash).not.toBe("evil-hash");
   });
 
-  it("updates stripePublishableKey and stripeSecretKey", async () => {
+  it("updates mercadopagoAccessToken + mercadopagoPublicKey jointly", async () => {
     const { PATCH } = await import("@/app/api/restaurants/[slug]/settings/route");
     const token = await makeToken(restaurantId, TEST_SLUG, TEST_EMAIL);
     const req = new NextRequest(
@@ -302,8 +298,8 @@ describe("PATCH /api/restaurants/[slug]/settings", () => {
           cookie: `${COOKIE_NAME}=${token}`,
         },
         body: JSON.stringify({
-          stripePublishableKey: "pk_live_newkey123",
-          stripeSecretKey: "sk_live_newkey456",
+          mercadopagoAccessToken: "APP_USR_newtoken456",
+          mercadopagoPublicKey: "APP_USR_pk_newkey456",
         }),
       }
     );
@@ -311,13 +307,38 @@ describe("PATCH /api/restaurants/[slug]/settings", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.stripePublishableKey).toBe("pk_live_newkey123");
-    // stripeSecretKey must NOT appear in response
-    expect(body.stripeSecretKey).toBeUndefined();
+    // sensitive fields must NOT appear in response
+    expect(body.mercadopagoAccessToken).toBeUndefined();
+    expect(body.mercadopagoPublicKey).toBeUndefined();
 
     // Verify it was actually saved
     const stored = await prisma.restaurant.findUnique({ where: { id: restaurantId } });
-    expect(stored!.stripeSecretKey).toBe("sk_live_newkey456");
+    expect(stored!.mercadopagoAccessToken).toBe("APP_USR_newtoken456");
+    expect(stored!.mercadopagoPublicKey).toBe("APP_USR_pk_newkey456");
+  });
+
+  it("rejects empty/whitespace mercadopagoAccessToken + mercadopagoPublicKey", async () => {
+    const { PATCH } = await import("@/app/api/restaurants/[slug]/settings/route");
+    const token = await makeToken(restaurantId, TEST_SLUG, TEST_EMAIL);
+    const req = new NextRequest(
+      `http://localhost:3000/api/restaurants/${TEST_SLUG}/settings`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          cookie: `${COOKIE_NAME}=${token}`,
+        },
+        body: JSON.stringify({
+          mercadopagoAccessToken: "   ",
+          mercadopagoPublicKey: "   ",
+        }),
+      }
+    );
+    const res = await PATCH(req, { params: Promise.resolve({ slug: TEST_SLUG }) });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/cannot be empty/i);
   });
 
   it("updates whatsappNumber and whatsappMessageTemplate", async () => {

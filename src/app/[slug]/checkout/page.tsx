@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/components/CartProvider";
-import { PaymentForm } from "@/components/PaymentForm";
+import { maskCpf, isValidCpf, stripCpf } from "@/lib/cpfUtils";
 
 function formatPrice(priceInCents: number): string {
   return `R$ ${(priceInCents / 100).toFixed(2).replace(".", ",")}`;
@@ -17,14 +17,9 @@ function applyPhoneMask(value: string): string {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
-type PaymentMethod = "PIX" | "CARD";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-interface PaymentSession {
-  orderId: string;
-  clientSecret: string;
-  publishableKey: string;
-  paymentMethod: PaymentMethod;
-}
+type PaymentMethod = "PIX" | "CARD";
 
 export default function CheckoutPage() {
   const params = useParams<{ slug: string }>();
@@ -34,26 +29,12 @@ export default function CheckoutPage() {
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("PIX");
-  const [phoneError, setPhoneError] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [fieldError, setFieldError] = useState("");
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [payment, setPayment] = useState<PaymentSession | null>(null);
-
-  if (payment) {
-    return (
-      <main className="max-w-lg mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">Finalize o pagamento</h1>
-        <PaymentForm
-          clientSecret={payment.clientSecret}
-          publishableKey={payment.publishableKey}
-          paymentMethod={payment.paymentMethod}
-          slug={slug}
-          orderId={payment.orderId}
-        />
-      </main>
-    );
-  }
 
   if (items.length === 0) {
     return (
@@ -68,16 +49,30 @@ export default function CheckoutPage() {
 
   function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
     setCustomerPhone(applyPhoneMask(e.target.value));
-    setPhoneError("");
+    setFieldError("");
+  }
+
+  function handleCpfChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setCpf(maskCpf(e.target.value));
+    setFieldError("");
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const rawPhone = customerPhone.replace(/\D/g, "");
     if (rawPhone.length < 10) {
-      setPhoneError("Telefone inválido");
+      setFieldError("Telefone inválido");
       return;
     }
+    if (!EMAIL_RE.test(customerEmail)) {
+      setFieldError("E-mail inválido");
+      return;
+    }
+    if (paymentMethod === "CARD" && !isValidCpf(cpf)) {
+      setFieldError("CPF inválido");
+      return;
+    }
+
     setApiError("");
     setIsSubmitting(true);
     try {
@@ -87,6 +82,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customerName,
           customerPhone: rawPhone,
+          customerEmail,
           items: items.map((i) => ({ menuItemId: i.id, quantity: i.quantity })),
         }),
       });
@@ -96,34 +92,26 @@ export default function CheckoutPage() {
       }
       const order = (await orderRes.json()) as { id: string; orderNumber: number };
 
-      const payRes = await fetch(
-        `/api/restaurants/${slug}/orders/${order.id}/pay`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentMethod }),
+      if (paymentMethod === "PIX") {
+        const payRes = await fetch(
+          `/api/restaurants/${slug}/orders/${order.id}/pay/pix`,
+          { method: "POST" }
+        );
+        if (!payRes.ok) {
+          setApiError("Não foi possível gerar o PIX. Tente novamente.");
+          return;
         }
-      );
-      if (!payRes.ok) {
-        // Payment initialization failed (e.g. restaurant has no Stripe keys).
-        // Order is already created — clear cart and show status page.
         clearCart();
         router.push(`/${slug}/pedido/${order.id}`);
         return;
       }
-      const pay = (await payRes.json()) as {
-        clientSecret: string;
-        publishableKey: string;
-        paymentMethod: PaymentMethod;
-      };
 
+      // CARD
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(`order-${order.id}-cpf`, stripCpf(cpf));
+      }
       clearCart();
-      setPayment({
-        orderId: order.id,
-        clientSecret: pay.clientSecret,
-        publishableKey: pay.publishableKey,
-        paymentMethod: pay.paymentMethod,
-      });
+      router.push(`/${slug}/checkout/cartao/${order.id}`);
     } catch {
       setApiError("Erro ao realizar pedido. Tente novamente.");
     } finally {
@@ -160,9 +148,7 @@ export default function CheckoutPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-1">
-          <label htmlFor="customerName" className="font-medium">
-            Nome
-          </label>
+          <label htmlFor="customerName" className="font-medium">Nome</label>
           <input
             id="customerName"
             name="customerName"
@@ -175,9 +161,7 @@ export default function CheckoutPage() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="customerPhone" className="font-medium">
-            Telefone
-          </label>
+          <label htmlFor="customerPhone" className="font-medium">Telefone</label>
           <input
             id="customerPhone"
             name="customerPhone"
@@ -188,9 +172,23 @@ export default function CheckoutPage() {
             placeholder="(11) 99999-9999"
             className="border rounded-md px-3 py-2"
           />
-          {phoneError && (
-            <p className="text-red-600 text-sm">{phoneError}</p>
-          )}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="customerEmail" className="font-medium">E-mail</label>
+          <input
+            id="customerEmail"
+            name="customerEmail"
+            type="email"
+            required
+            value={customerEmail}
+            onChange={(e) => {
+              setCustomerEmail(e.target.value);
+              setFieldError("");
+            }}
+            placeholder="voce@exemplo.com"
+            className="border rounded-md px-3 py-2"
+          />
         </div>
 
         <fieldset className="flex flex-col gap-2">
@@ -219,16 +217,32 @@ export default function CheckoutPage() {
           </label>
         </fieldset>
 
-        {apiError && (
-          <p className="text-red-600 text-sm">{apiError}</p>
+        {paymentMethod === "CARD" && (
+          <div className="flex flex-col gap-1">
+            <label htmlFor="cpf" className="font-medium">CPF</label>
+            <input
+              id="cpf"
+              name="cpf"
+              type="text"
+              required
+              inputMode="numeric"
+              value={cpf}
+              onChange={handleCpfChange}
+              placeholder="000.000.000-00"
+              className="border rounded-md px-3 py-2"
+            />
+          </div>
         )}
+
+        {fieldError && <p className="text-red-600 text-sm">{fieldError}</p>}
+        {apiError && <p className="text-red-600 text-sm">{apiError}</p>}
 
         <button
           type="submit"
           disabled={isSubmitting}
           className="w-full py-3 bg-zinc-900 text-white rounded-md font-medium disabled:opacity-50"
         >
-          Confirmar Pedido
+          {paymentMethod === "PIX" ? "Pagar com PIX" : "Ir para o pagamento"}
         </button>
       </form>
     </main>

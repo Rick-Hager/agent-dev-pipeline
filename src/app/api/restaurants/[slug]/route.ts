@@ -17,7 +17,6 @@ export async function GET(
         logo: true,
         email: true,
         businessHours: true,
-        stripePublishableKey: true,
         whatsappNumber: true,
         whatsappMessageTemplate: true,
         createdAt: true,
