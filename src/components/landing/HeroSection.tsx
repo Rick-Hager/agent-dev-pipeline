@@ -28,7 +28,7 @@ export function HeroSection() {
             Entrar
           </Link>
           <Link
-            href="#contato"
+            href="/contato"
             className="inline-flex w-full items-center justify-center rounded-lg border border-zinc-300 bg-white px-6 py-3 text-base font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 sm:w-auto"
           >
             Quero para minha loja

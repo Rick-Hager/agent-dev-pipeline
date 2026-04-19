@@ -39,11 +39,6 @@ test.describe("Landing page — Cardápio Rápido", () => {
     await expect(page.getByRole("heading", { name: "Preço" })).toBeVisible();
   });
 
-  test("renders the 'Contato' section heading", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Contato" })).toBeVisible();
-  });
-
   test("'Entrar' CTA links to /backoffice/login", async ({ page }) => {
     await page.goto("/");
     const entrar = page.getByRole("link", { name: "Entrar" });
@@ -60,24 +55,22 @@ test.describe("Landing page — Cardápio Rápido", () => {
     expect(new URL(page.url()).pathname).toBe("/backoffice/login");
   });
 
-  test("'Quero para minha loja' CTA in hero links to #contato", async ({
+  test("'Quero para minha loja' CTA in hero links to /contato", async ({
     page,
   }) => {
     await page.goto("/");
     const hero = page.locator("section").first();
     const cta = hero.getByRole("link", { name: "Quero para minha loja" });
     await expect(cta).toBeVisible();
-    await expect(cta).toHaveAttribute("href", "#contato");
+    await expect(cta).toHaveAttribute("href", "/contato");
   });
 
-  test("#contato anchor resolves to the contact section on the page", async ({
+  test("clicking 'Quero para minha loja' navigates to /contato page", async ({
     page,
   }) => {
     await page.goto("/");
-    const contato = page.locator("#contato");
-    await expect(contato).toBeAttached();
-    await expect(
-      contato.getByRole("heading", { name: "Contato" })
-    ).toBeVisible();
+    await page.getByRole("link", { name: "Quero para minha loja" }).first().click();
+    await page.waitForURL("**/contato");
+    expect(new URL(page.url()).pathname).toBe("/contato");
   });
 });

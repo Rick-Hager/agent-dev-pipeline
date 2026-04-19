@@ -24,13 +24,10 @@ describe("HomePage (landing)", () => {
     expect(link).toHaveAttribute("href", "/backoffice/login");
   });
 
-  it("renders 'Quero para minha loja' CTA pointing to #contato", () => {
+  it("renders 'Quero para minha loja' CTA pointing to /contato", () => {
     render(<HomePage />);
-    const links = screen.getAllByRole("link", { name: /Quero para minha loja/i });
-    const anchorLink = links.find(
-      (el) => el.getAttribute("href") === "#contato"
-    );
-    expect(anchorLink).toBeDefined();
+    const link = screen.getByRole("link", { name: /Quero para minha loja/i });
+    expect(link).toHaveAttribute("href", "/contato");
   });
 
   it("renders 'Como funciona' section with exactly 3 steps", () => {
@@ -75,20 +72,4 @@ describe("HomePage (landing)", () => {
     expect(screen.getAllByText(/Fatura no fim do mês/i).length).toBeGreaterThan(0);
   });
 
-  it("renders the 'Contato' section heading with id='contato' anchor", () => {
-    render(<HomePage />);
-    const heading = screen.getByRole("heading", { level: 2, name: /Contato/i });
-    expect(heading).toBeInTheDocument();
-    const section = heading.closest("section");
-    expect(section).not.toBeNull();
-    expect(section?.getAttribute("id")).toBe("contato");
-  });
-
-  it("renders a contact mailto link", () => {
-    render(<HomePage />);
-    const mailto = screen
-      .getAllByRole("link")
-      .find((el) => el.getAttribute("href")?.startsWith("mailto:"));
-    expect(mailto).toBeDefined();
-  });
 });

@@ -22,9 +22,9 @@ describe("HeroSection", () => {
     expect(link).toHaveAttribute("href", "/backoffice/login");
   });
 
-  it("renders 'Quero para minha loja' link pointing to #contato", () => {
+  it("renders 'Quero para minha loja' link pointing to /contato", () => {
     render(<HeroSection />);
     const link = screen.getByRole("link", { name: /Quero para minha loja/i });
-    expect(link).toHaveAttribute("href", "#contato");
+    expect(link).toHaveAttribute("href", "/contato");
   });
 });
