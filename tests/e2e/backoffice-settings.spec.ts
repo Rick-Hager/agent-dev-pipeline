@@ -158,6 +158,10 @@ test.describe("Backoffice Settings Page", () => {
     await tokenInput.clear();
     await tokenInput.fill("APP_USR-e2e-mp-token-example");
 
+    const publicKeyInput = page.getByLabel(/public key/i);
+    await publicKeyInput.clear();
+    await publicKeyInput.fill("APP_USR-e2e-mp-pk-example");
+
     await page.getByRole("button", { name: /salvar/i }).click();
 
     await expect(page.getByText(/configurações salvas/i)).toBeVisible({

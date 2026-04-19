@@ -63,6 +63,7 @@ async function createOrder(
     data: {
       customerName,
       customerPhone: "+5511999990000",
+      customerEmail: "e2e@test.com",
       items: [{ menuItemId, quantity: 1 }],
     },
   });
