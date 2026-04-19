@@ -46,18 +46,17 @@ export function CardPaymentForm({
   amountInCents,
 }: CardPaymentFormProps) {
   const router = useRouter();
-  const [setupError, setSetupError] = useState<string | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem(`order-${orderId}-cpf`)
+      ? null
+      : "CPF não encontrado. Volte ao checkout e informe o CPF novamente.";
+  });
   const [apiError, setApiError] = useState<string | null>(null);
   const brickRef = useRef<BrickController | null>(null);
 
   useEffect(() => {
-    const cpf = sessionStorage.getItem(`order-${orderId}-cpf`);
-    if (!cpf) {
-      setSetupError(
-        "CPF não encontrado. Volte ao checkout e informe o CPF novamente."
-      );
-      return;
-    }
+    if (setupError) return;
 
     let cancelled = false;
 
@@ -124,7 +123,7 @@ export function CardPaymentForm({
       brickRef.current?.unmount();
       brickRef.current = null;
     };
-  }, [publicKey, slug, orderId, amountInCents, router]);
+  }, [publicKey, slug, orderId, amountInCents, router, setupError]);
 
   if (setupError) {
     return (
