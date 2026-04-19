@@ -33,37 +33,42 @@ jobs:
         run: npx prisma db push
 
       - name: Update labels
-        run: |
-          gh issue edit ${{ github.event.issue.number }} --add-label "agent-working" || true
-          gh issue edit ${{ github.event.issue.number }} --remove-label "agent-ready" || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUM: ${{ github.event.issue.number }}
+        run: |
+          gh issue edit "$ISSUE_NUM" --add-label "agent-working" || true
+          gh issue edit "$ISSUE_NUM" --remove-label "agent-ready" || true
 
       - name: Fetch issue details
         id: issue
-        run: |
-          gh issue view ${{ github.event.issue.number }} --json title,body --jq '"\(.title)\n\n\(.body)"' > /tmp/issue-body.txt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUM: ${{ github.event.issue.number }}
+        run: |
+          gh issue view "$ISSUE_NUM" --json title,body --jq '"\(.title)\n\n\(.body)"' > /tmp/issue-body.txt
 
       - name: Run Maestro Agent
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUM: ${{ github.event.issue.number }}
         run: |
           claude --print \
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Agent" \
             --max-turns 200 \
-            "Read agents/maestro.md for your instructions. Then implement the following GitHub Issue #${{ github.event.issue.number }}. The issue content is saved at /tmp/issue-body.txt — read it with the Read tool. Repository is already cloned. Create a feature branch, implement with TDD, run all tests, and push the branch."
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            "Read agents/maestro.md for your instructions. Then implement the following GitHub Issue #${ISSUE_NUM}. The issue content is saved at /tmp/issue-body.txt — read it with the Read tool. Repository is already cloned. Create a feature branch, implement with TDD, run all tests, and push the branch."
 
       - name: Create PR if branch was pushed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUM: ${{ github.event.issue.number }}
         run: |
           BRANCH=$(git branch --show-current)
           if [ "$BRANCH" != "main" ] && [ -n "$BRANCH" ]; then
             # Check if PR already exists for this branch
             EXISTING_PR=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null)
             if [ -z "$EXISTING_PR" ]; then
-              ISSUE_TITLE="${{ github.event.issue.title }}"
-              ISSUE_NUM="${{ github.event.issue.number }}"
               gh pr create \
                 --title "feat: ${ISSUE_TITLE} (closes #${ISSUE_NUM})" \
                 --body "## Summary
@@ -79,23 +84,23 @@ jobs:
                 --head "$BRANCH"
             fi
           fi
-          gh issue edit ${{ github.event.issue.number }} --remove-label "agent-working" || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh issue edit "$ISSUE_NUM" --remove-label "agent-working" || true
 
       - name: Handle failure
         if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUM: ${{ github.event.issue.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          gh issue comment ${{ github.event.issue.number }} \
+          gh issue comment "$ISSUE_NUM" \
             --body "🤖 **Agent Pipeline Failed**
 
           The Maestro agent encountered an error while processing this issue.
-          Please check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+          Please check the [workflow run](${RUN_URL}) for details.
 
           Adding \`agent-blocked\` label for human review."
 
-          gh issue edit ${{ github.event.issue.number }} \
+          gh issue edit "$ISSUE_NUM" \
             --add-label "agent-blocked" \
             --remove-label "agent-working"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
