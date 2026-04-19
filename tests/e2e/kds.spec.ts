@@ -61,6 +61,7 @@ async function createOrder(
     data: {
       customerName,
       customerPhone: "11987654321",
+      customerEmail: "e2e@test.com",
       items: [{ menuItemId, quantity: 1 }],
     },
   });
@@ -407,6 +408,7 @@ test.describe("KDS — Kitchen Display System", () => {
       data: {
         customerName: "Invisivel CREATED",
         customerPhone: "11987654321",
+        customerEmail: "e2e@test.com",
         items: [{ menuItemId, quantity: 1 }],
       },
     });
@@ -418,6 +420,7 @@ test.describe("KDS — Kitchen Display System", () => {
       data: {
         customerName: "Invisivel PENDING",
         customerPhone: "11987654321",
+        customerEmail: "e2e@test.com",
         items: [{ menuItemId, quantity: 1 }],
       },
     });
@@ -432,6 +435,7 @@ test.describe("KDS — Kitchen Display System", () => {
       data: {
         customerName: "Invisivel CANCELLED",
         customerPhone: "11987654321",
+        customerEmail: "e2e@test.com",
         items: [{ menuItemId, quantity: 1 }],
       },
     });

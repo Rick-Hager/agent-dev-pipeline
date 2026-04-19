@@ -90,6 +90,7 @@ test.describe("Order API E2E", () => {
       data: {
         customerName: "John Doe",
         customerPhone: "+5511999999999",
+        customerEmail: "e2e@test.com",
         items: [{ menuItemId, quantity: 2 }],
       },
     });
@@ -142,6 +143,7 @@ test.describe("Order API E2E", () => {
     const orderData = {
       customerName: "Alice",
       customerPhone: "+5511111111111",
+      customerEmail: "e2e@test.com",
       items: [{ menuItemId: seqItem.id, quantity: 1 }],
     };
 
@@ -169,6 +171,7 @@ test.describe("Order API E2E", () => {
       data: {
         customerName: "Snapshot Test",
         customerPhone: "+5511888888888",
+        customerEmail: "e2e@test.com",
         items: [{ menuItemId, quantity: 1 }],
       },
     });
@@ -278,6 +281,7 @@ test.describe("Order API E2E", () => {
       data: {
         customerName: "Get Test Customer",
         customerPhone: "+5511777777777",
+        customerEmail: "e2e@test.com",
         items: [{ menuItemId, quantity: 2 }],
       },
     });
@@ -327,6 +331,7 @@ test.describe("Order API E2E", () => {
       data: {
         customerName: "Lifecycle Customer",
         customerPhone: "+5511555555555",
+        customerEmail: "e2e@test.com",
         items: [{ menuItemId, quantity: 1 }],
       },
     });
@@ -386,6 +391,7 @@ test.describe("Order API E2E", () => {
       data: {
         customerName: "Cancel Customer",
         customerPhone: "+5511444444444",
+        customerEmail: "e2e@test.com",
         items: [{ menuItemId, quantity: 1 }],
       },
     });
@@ -411,6 +417,7 @@ test.describe("Order API E2E", () => {
       data: {
         customerName: "Invalid Transition Customer",
         customerPhone: "+5511333333333",
+        customerEmail: "e2e@test.com",
         items: [{ menuItemId, quantity: 1 }],
       },
     });

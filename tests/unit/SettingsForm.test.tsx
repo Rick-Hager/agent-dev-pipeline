@@ -11,6 +11,7 @@ const defaultSettings = {
   email: "test@test.com",
   businessHours: "",
   mercadopagoAccessTokenMasked: "****3456" as string | null,
+  mercadopagoPublicKeyMasked: "****pk78" as string | null,
   whatsappNumber: "",
   whatsappMessageTemplate: "",
 };
@@ -145,7 +146,7 @@ describe("SettingsForm", () => {
     expect(body.mercadopagoAccessToken).toBeUndefined();
   });
 
-  it("includes mercadopagoAccessToken in PATCH body when user types a new value", async () => {
+  it("includes mercadopagoAccessToken + mercadopagoPublicKey in PATCH body when user types both values", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ ...defaultSettings }),
@@ -155,6 +156,9 @@ describe("SettingsForm", () => {
 
     fireEvent.change(screen.getByLabelText(/access token/i), {
       target: { value: "APP_USR_newvalue123" },
+    });
+    fireEvent.change(screen.getByLabelText(/public key/i), {
+      target: { value: "APP_USR_pk_newkey456" },
     });
 
     await act(async () => {
@@ -168,6 +172,26 @@ describe("SettingsForm", () => {
     const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     const body = JSON.parse(options.body as string);
     expect(body.mercadopagoAccessToken).toBe("APP_USR_newvalue123");
+    expect(body.mercadopagoPublicKey).toBe("APP_USR_pk_newkey456");
+  });
+
+  it("rejects submit when only one of access token / public key is provided", async () => {
+    render(<SettingsForm initialSettings={defaultSettings} slug="test-restaurant" />);
+
+    fireEvent.change(screen.getByLabelText(/access token/i), {
+      target: { value: "APP_USR_only_access" },
+    });
+
+    await act(async () => {
+      fireEvent.submit(
+        screen.getByRole("button", { name: /salvar/i }).closest("form")!
+      );
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/access token e public key juntos/i)
+    ).toBeInTheDocument();
   });
 
   it("calls PATCH on the correct settings endpoint", async () => {

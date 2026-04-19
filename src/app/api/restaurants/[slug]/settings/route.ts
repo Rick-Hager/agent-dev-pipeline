@@ -52,6 +52,7 @@ export async function GET(
       email: restaurant.email,
       businessHours: restaurant.businessHours,
       mercadopagoAccessTokenMasked: maskSecret(restaurant.mercadopagoAccessToken),
+      mercadopagoPublicKeyMasked: maskSecret(restaurant.mercadopagoPublicKey),
       whatsappNumber: restaurant.whatsappNumber,
       whatsappMessageTemplate: restaurant.whatsappMessageTemplate,
       updatedAt: restaurant.updatedAt,
@@ -127,21 +128,47 @@ export async function PATCH(
     if (input.businessHours !== undefined) {
       updateData.businessHours = input.businessHours ?? null;
     }
-    if (input.mercadopagoAccessToken !== undefined) {
-      if (typeof input.mercadopagoAccessToken !== "string") {
+    const accessTokenInput = input.mercadopagoAccessToken;
+    const publicKeyInput = input.mercadopagoPublicKey;
+    const patchingAccess = accessTokenInput !== undefined;
+    const patchingPublic = publicKeyInput !== undefined;
+
+    if (patchingAccess !== patchingPublic) {
+      return NextResponse.json(
+        {
+          error:
+            "mercadopagoAccessToken and mercadopagoPublicKey must be provided together",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (patchingAccess && patchingPublic) {
+      if (typeof accessTokenInput !== "string") {
         return NextResponse.json(
           { error: "mercadopagoAccessToken must be a string" },
           { status: 400 }
         );
       }
-      const trimmed = input.mercadopagoAccessToken.trim();
-      if (trimmed.length === 0) {
+      if (typeof publicKeyInput !== "string") {
         return NextResponse.json(
-          { error: "mercadopagoAccessToken cannot be empty" },
+          { error: "mercadopagoPublicKey must be a string" },
           { status: 400 }
         );
       }
-      updateData.mercadopagoAccessToken = trimmed;
+      const at = accessTokenInput.trim();
+      const pk = publicKeyInput.trim();
+      if (at.length === 0 || pk.length === 0) {
+        return NextResponse.json(
+          {
+            error:
+              "mercadopagoAccessToken and mercadopagoPublicKey cannot be empty",
+          },
+          { status: 400 }
+        );
+      }
+      updateData.mercadopagoAccessToken = at;
+      updateData.mercadopagoPublicKey = pk;
     }
     if (input.whatsappNumber !== undefined) {
       updateData.whatsappNumber =

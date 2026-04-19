@@ -286,7 +286,7 @@ describe("PATCH /api/restaurants/[slug]/settings", () => {
     expect(restaurant!.passwordHash).not.toBe("evil-hash");
   });
 
-  it("updates mercadopagoAccessToken", async () => {
+  it("updates mercadopagoAccessToken + mercadopagoPublicKey jointly", async () => {
     const { PATCH } = await import("@/app/api/restaurants/[slug]/settings/route");
     const token = await makeToken(restaurantId, TEST_SLUG, TEST_EMAIL);
     const req = new NextRequest(
@@ -299,6 +299,7 @@ describe("PATCH /api/restaurants/[slug]/settings", () => {
         },
         body: JSON.stringify({
           mercadopagoAccessToken: "APP_USR_newtoken456",
+          mercadopagoPublicKey: "APP_USR_pk_newkey456",
         }),
       }
     );
@@ -306,15 +307,17 @@ describe("PATCH /api/restaurants/[slug]/settings", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    // mercadopagoAccessToken must NOT appear in response (sensitive)
+    // sensitive fields must NOT appear in response
     expect(body.mercadopagoAccessToken).toBeUndefined();
+    expect(body.mercadopagoPublicKey).toBeUndefined();
 
     // Verify it was actually saved
     const stored = await prisma.restaurant.findUnique({ where: { id: restaurantId } });
     expect(stored!.mercadopagoAccessToken).toBe("APP_USR_newtoken456");
+    expect(stored!.mercadopagoPublicKey).toBe("APP_USR_pk_newkey456");
   });
 
-  it("rejects empty string mercadopagoAccessToken", async () => {
+  it("rejects empty/whitespace mercadopagoAccessToken + mercadopagoPublicKey", async () => {
     const { PATCH } = await import("@/app/api/restaurants/[slug]/settings/route");
     const token = await makeToken(restaurantId, TEST_SLUG, TEST_EMAIL);
     const req = new NextRequest(
@@ -325,12 +328,17 @@ describe("PATCH /api/restaurants/[slug]/settings", () => {
           "Content-Type": "application/json",
           cookie: `${COOKIE_NAME}=${token}`,
         },
-        body: JSON.stringify({ mercadopagoAccessToken: "   " }),
+        body: JSON.stringify({
+          mercadopagoAccessToken: "   ",
+          mercadopagoPublicKey: "   ",
+        }),
       }
     );
     const res = await PATCH(req, { params: Promise.resolve({ slug: TEST_SLUG }) });
+    const body = await res.json();
 
     expect(res.status).toBe(400);
+    expect(body.error).toMatch(/cannot be empty/i);
   });
 
   it("updates whatsappNumber and whatsappMessageTemplate", async () => {

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, PaymentMethod } from "@prisma/client";
 import { OrderStatusPolling } from "@/components/OrderStatusPolling";
+import { PixPaymentView } from "@/components/PixPaymentView";
 
 interface PageProps {
   params: Promise<{ slug: string; orderId: string }>;
@@ -32,6 +33,14 @@ export default async function OrderStatusPage({ params }: PageProps) {
 
   if (!order) notFound();
 
+  const showPix =
+    order.status === OrderStatus.PAYMENT_PENDING &&
+    order.paymentMethod === PaymentMethod.PIX &&
+    order.pixQrCode &&
+    order.pixQrCodeBase64 &&
+    order.pixTicketUrl &&
+    order.pixExpiresAt;
+
   return (
     <main className="max-w-lg mx-auto p-4">
       <h1 className="text-2xl font-bold mb-2">Pedido #{order.orderNumber}</h1>
@@ -50,6 +59,17 @@ export default async function OrderStatusPage({ params }: PageProps) {
           orderId={orderId}
         />
       </div>
+
+      {showPix && (
+        <div className="mb-6">
+          <PixPaymentView
+            qrCode={order.pixQrCode!}
+            qrCodeBase64={order.pixQrCodeBase64!}
+            ticketUrl={order.pixTicketUrl!}
+            expiresAt={order.pixExpiresAt!.toISOString()}
+          />
+        </div>
+      )}
 
       <ul className="space-y-3 mb-4">
         {order.items.map((item) => (

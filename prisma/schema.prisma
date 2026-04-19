@@ -15,6 +15,7 @@ model Restaurant {
   passwordHash             String
   businessHours            Json?
   mercadopagoAccessToken   String?
+  mercadopagoPublicKey     String?
   whatsappNumber           String?
   whatsappApiConfig        Json?
   whatsappMessageTemplate  String?
@@ -83,8 +84,12 @@ model Order {
   customerPhone           String
   status                  OrderStatus    @default(CREATED)
   paymentMethod           PaymentMethod?
-  mercadopagoPreferenceId String?
   mercadopagoPaymentId    String?
+  customerEmail           String?
+  pixQrCode               String?
+  pixQrCodeBase64         String?
+  pixTicketUrl            String?
+  pixExpiresAt            DateTime?
   totalInCents            Int
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
