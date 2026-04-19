@@ -74,6 +74,7 @@ export function CardPaymentForm({
             paymentMethods: { maxInstallments: 1 },
           },
           callbacks: {
+            onReady: () => {},
             onSubmit: async (formData: CardFormData) => {
               const storedCpf = sessionStorage.getItem(
                 `order-${orderId}-cpf`
