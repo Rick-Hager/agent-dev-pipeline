@@ -6,7 +6,7 @@ export interface CardFormData {
 }
 
 export interface BrickCallbacks {
-  onReady?: () => void;
+  onReady: () => void;
   onSubmit: (formData: CardFormData) => Promise<void> | void;
   onError?: (error: { message?: string }) => void;
 }
