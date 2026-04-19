@@ -3,7 +3,6 @@ import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
 import { OperatorSection } from "@/components/landing/OperatorSection";
 import { ConsumerSection } from "@/components/landing/ConsumerSection";
 import { PricingSection } from "@/components/landing/PricingSection";
-import { ContactSection } from "@/components/landing/ContactSection";
 
 export default function Home() {
   return (
@@ -13,7 +12,6 @@ export default function Home() {
       <OperatorSection />
       <ConsumerSection />
       <PricingSection />
-      <ContactSection />
       <footer className="border-t border-zinc-200 bg-white px-6 py-8 text-center text-sm text-zinc-500">
         <p>
           &copy; {new Date().getFullYear()} Cardápio Rápido. Todos os direitos

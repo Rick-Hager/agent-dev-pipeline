@@ -54,5 +54,9 @@ test-results/
 playwright-report/
 coverage/
 
+# Contact form submissions
+form.txt
+form.test.txt
+
 /src/generated/prisma
 .env*.local
