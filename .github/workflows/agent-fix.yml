@@ -39,25 +39,28 @@ jobs:
 
       - name: Check retry count
         id: retry
+        env:
+          HEAD_BRANCH: ${{ github.event.check_suite.head_branch }}
         run: |
-          BRANCH=${{ github.event.check_suite.head_branch }}
-          COUNT=$(git log --oneline --grep="fix: ci" origin/main..$BRANCH | wc -l | tr -d ' ')
-          echo "count=$COUNT" >> $GITHUB_OUTPUT
+          COUNT=$(git log --oneline --grep="fix: ci" "origin/main..$HEAD_BRANCH" | wc -l | tr -d ' ')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           if [ "$COUNT" -ge 2 ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run Maestro to fix CI
         if: steps.retry.outputs.skip == 'false'
+        env:
+          HEAD_BRANCH: ${{ github.event.check_suite.head_branch }}
         run: |
           claude --print \
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" \
             --max-turns 30 \
             "Read agents/maestro.md and CLAUDE.md for context.
 
-            The CI pipeline has failed on branch ${{ github.event.check_suite.head_branch }}.
+            The CI pipeline has failed on branch ${HEAD_BRANCH}.
             Run the tests locally to reproduce the failures:
             1. npm run test
             2. npm run test:e2e
@@ -68,14 +71,15 @@ jobs:
 
       - name: Comment on PR if max retries reached
         if: steps.retry.outputs.skip == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_BRANCH: ${{ github.event.check_suite.head_branch }}
         run: |
-          PR_NUMBER=$(gh pr list --head ${{ github.event.check_suite.head_branch }} --json number --jq '.[0].number')
+          PR_NUMBER=$(gh pr list --head "$HEAD_BRANCH" --json number --jq '.[0].number')
           if [ -n "$PR_NUMBER" ]; then
-            gh pr comment $PR_NUMBER \
+            gh pr comment "$PR_NUMBER" \
               --body "🤖 **Agent Fix Failed**
 
             The agent has attempted to fix CI failures 2 times without success.
             Human review is needed. Please check the failing tests and fix manually."
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
