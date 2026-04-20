@@ -156,7 +156,7 @@ export default function CheckoutPage() {
             required
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            className="border rounded-md px-3 py-2"
+            className="border rounded-md px-3 py-2 text-gray-900"
           />
         </div>
 
@@ -170,7 +170,7 @@ export default function CheckoutPage() {
             value={customerPhone}
             onChange={handlePhoneChange}
             placeholder="(11) 99999-9999"
-            className="border rounded-md px-3 py-2"
+            className="border rounded-md px-3 py-2 text-gray-900"
           />
         </div>
 
@@ -187,7 +187,7 @@ export default function CheckoutPage() {
               setFieldError("");
             }}
             placeholder="voce@exemplo.com"
-            className="border rounded-md px-3 py-2"
+            className="border rounded-md px-3 py-2 text-gray-900"
           />
         </div>
 
@@ -229,7 +229,7 @@ export default function CheckoutPage() {
               value={cpf}
               onChange={handleCpfChange}
               placeholder="000.000.000-00"
-              className="border rounded-md px-3 py-2"
+              className="border rounded-md px-3 py-2 text-gray-900"
             />
           </div>
         )}
