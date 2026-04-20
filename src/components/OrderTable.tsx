@@ -90,7 +90,13 @@ export function OrderTable({ orders }: OrderTableProps) {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {new Date(order.createdAt).toLocaleDateString()}
+                    {new Date(order.createdAt).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </td>
                 </tr>
                 {isExpanded && (
