@@ -124,7 +124,7 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
             value={form.name}
             onChange={handleChange}
             required
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -142,7 +142,7 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
             value={form.slug}
             onChange={handleChange}
             required
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -160,7 +160,7 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
             value={form.logo}
             onChange={handleChange}
             placeholder="https://example.com/logo.png"
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -178,7 +178,7 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
             onChange={handleChange}
             rows={4}
             placeholder={'{"seg": "9:00-22:00", "ter": "9:00-22:00"}'}
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
           />
         </div>
       </section>
@@ -214,7 +214,7 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
                 ? "Digite para alterar"
                 : "APP_USR_..."
             }
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
           />
         </div>
 
@@ -241,7 +241,7 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
                 ? "Digite para alterar"
                 : "APP_USR_pk_..."
             }
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
           />
         </div>
       </section>
@@ -264,7 +264,7 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
             value={form.whatsappNumber}
             onChange={handleChange}
             placeholder="+5511999990000"
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -282,7 +282,7 @@ export default function SettingsForm({ initialSettings, slug }: Props) {
             onChange={handleChange}
             rows={3}
             placeholder="Seu pedido {orderNumber} está pronto!"
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
       </section>
